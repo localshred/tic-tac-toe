@@ -9,6 +9,8 @@ import Text exposing (fromString)
 import Window
 import Debug
 
+import Viewport exposing (Viewport)
+
 cols : number
 cols =
   3
@@ -20,22 +22,6 @@ gutter =
 rows : number
 rows =
   3
-
-type alias Viewport =
-  { width : Int
-  , height : Int
-  , halfWidth : Int
-  , halfHeight : Int
-  , minDimension : Int
-  , minX : Float
-  , maxX : Float
-  , minY : Float
-  , maxY : Float
-  , squareWidth : Float
-  , halfSquareWidth : Float
-  , boardWidth : Float
-  , halfBoardWidth : Float
-  }
 
 type Player =
   X | O
@@ -83,7 +69,7 @@ view : (Int,Int) -> (Int,Int) -> Game -> Element
 view mousePosition dimensions game =
   let
     viewport =
-      makeViewport dimensions
+      Viewport.fromDimensions dimensions rows gutter
 
     gameRows =
       makeRows rows cols viewport
@@ -178,47 +164,6 @@ makeSquare row col viewport color =
     outlined (dashed color) (square viewport.squareWidth)
     |> move coordinates
 
-makeViewport : (Int,Int) -> Viewport
-makeViewport (width,height) =
-  let
-    halfWidth =
-      width // 2
-
-    halfHeight =
-      height // 2
-
-    minX =
-      negate halfWidth |> toFloat
-
-    maxX =
-      halfWidth |> toFloat
-
-    minY =
-      negate halfHeight |> toFloat
-
-    maxY =
-      halfHeight |> toFloat
-
-    minDimension =
-      List.minimum [width, height] |> Maybe.withDefault 20
-
-    squareWidth =
-      (minDimension // rows) - ((rows - 1) * gutter) |> toFloat
-
-    halfSquareWidth =
-      squareWidth / 2
-
-    boardWidth =
-      (squareWidth * rows) + (gutter * (rows - 1))
-
-    halfBoardWidth =
-      boardWidth / 2
-  in
-    Viewport
-      width height halfWidth halfHeight
-      minDimension minX maxX minY maxY
-      squareWidth halfSquareWidth
-      boardWidth halfBoardWidth
 
 offset : Int -> Viewport -> Float
 offset pos viewport =
