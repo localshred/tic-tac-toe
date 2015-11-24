@@ -9,9 +9,17 @@ import Text exposing (fromString)
 import Window
 import Debug
 
-cols = 3
-gutter = 10
-rows = 3
+cols : Int
+cols =
+  3
+
+gutter : Int
+gutter =
+  10
+
+rows : Int
+rows =
+  3
 
 type alias Viewport =
   { width : Int
@@ -29,7 +37,8 @@ type alias Viewport =
   , halfBoardWidth : Float
   }
 
-type Player = X | O
+type Player =
+  X | O
 
 type State =
   Pending
@@ -37,7 +46,8 @@ type State =
   | Winner Player
   | Stalemate
 
-type alias SquarePosition = (Int,Int,Player)
+type alias SquarePosition =
+  (Int,Int,Player)
 
 type alias Game =
   { selections : List SquarePosition
@@ -45,19 +55,12 @@ type alias Game =
   , nextTurn : Player
   }
 
---initGame : Game
-initGame =
+init : Game
+init =
   Game [] Pending X
 
-updateGame : (Int,Int) -> Game -> Game
-updateGame (x,y) previousGame  =
-  { previousGame |
-    nextTurn = switchPlayer previousGame.nextTurn
-    , state = Started
-  }
-
-switchPlayer : Player -> Player
-switchPlayer currentPlayer =
+advanceTurn : Player -> Player
+advanceTurn currentPlayer =
   case currentPlayer of
     X ->
       O
@@ -68,42 +71,65 @@ switchPlayer currentPlayer =
 main : Signal Element
 main =
   let
-    mouseDownSampling = Signal.sampleOn Mouse.isDown Mouse.position
-    game = Signal.foldp updateGame initGame mouseDownSampling
-  in
-    Signal.map3 drawBoard Mouse.position Window.dimensions game
+    mouseDownSampling =
+      Signal.sampleOn Mouse.isDown Mouse.position
 
-drawBoard : (Int,Int) -> (Int,Int) -> Game -> Element
-drawBoard mousePosition dimensions game =
-  let
-    viewport = makeViewport dimensions
-    gameRows = makeRows rows cols viewport
-    centerCircle = filled yellow (circle 10)
-    title = drawTitle viewport
-    gameStateDisplay = gameState viewport game
-    mouseForm = show mousePosition
-              |> toForm
-              |> move ((,) (viewport.minX + 50) (negate (viewport.minY + 30)))
+    game =
+      Signal.foldp update init mouseDownSampling
   in
-    collage viewport.width viewport.height
-    <| title :: centerCircle :: mouseForm :: gameStateDisplay :: gameRows
+    Signal.map3 view Mouse.position Window.dimensions game
+
+view : (Int,Int) -> (Int,Int) -> Game -> Element
+view mousePosition dimensions game =
+  let
+    viewport =
+      makeViewport dimensions
+
+    gameRows =
+      makeRows rows cols viewport
+
+    centerCircle =
+      filled yellow (circle 10)
+
+    title =
+      drawTitle viewport
+
+    gameStateDisplay =
+      gameState viewport game
+
+    mouseForm =
+      mouseView viewport mousePosition
+
+    canvas forms =
+      collage viewport.width viewport.height forms
+
+    forms =
+      title :: centerCircle :: mouseForm :: gameStateDisplay :: gameRows
+  in
+    canvas forms
+
+update : (Int,Int) -> Game -> Game
+update (x,y) previousGame  =
+  { previousGame |
+    nextTurn = advanceTurn previousGame.nextTurn
+    , state = Started
+  }
+
+mouseView : Viewport -> (Int,Int) -> Form
+mouseView viewport mousePosition =
+  show mousePosition
+  |> toForm
+  |> move ((,) (viewport.minX + 50) (negate (viewport.minY + 30)))
 
 gameState : Viewport -> Game -> Form
 gameState viewport game =
   let
     xy = (,) (negate (viewport.minX + 50)) (viewport.minY + 90)
     state = case game.state of
-              Pending ->
-                "Pending"
-
-              Started ->
-                "Started"
-
-              Winner player ->
-                "Player " ++ playerName player ++ " won!"
-
-              Stalemate ->
-                "Aww shucks, stalemate!"
+              Pending -> "Pending"
+              Started -> "Started"
+              Winner player -> "Player " ++ playerName player ++ " won!"
+              Stalemate -> "Aww shucks, stalemate!"
   in
     state
     |> fromString
@@ -114,11 +140,8 @@ gameState viewport game =
 playerName : Player -> String
 playerName player =
   case player of
-    X ->
-      "X"
-
-    O ->
-      "O"
+    X -> "X"
+    O -> "O"
 
 drawTitle : Viewport -> Form
 drawTitle viewport =
@@ -158,43 +181,78 @@ makeSquare row col viewport color =
 makeViewport : (Int,Int) -> Viewport
 makeViewport (width,height) =
   let
-    halfWidth = width // 2
-    halfHeight = height // 2
-    minX = negate halfWidth |> toFloat
-    maxX = halfWidth |> toFloat
-    minY = negate halfHeight |> toFloat
-    maxY = halfHeight |> toFloat
-    minDimension = List.minimum [width, height] |> Maybe.withDefault 20
-    squareWidth = (minDimension // rows) - ((rows - 1) * gutter) |> toFloat
-    halfSquareWidth = squareWidth / 2
-    boardWidth = (squareWidth * rows) + (gutter * (rows - 1))
-    halfBoardWidth = boardWidth / 2
+    halfWidth =
+      width // 2
+
+    halfHeight =
+      height // 2
+
+    minX =
+      negate halfWidth |> toFloat
+
+    maxX =
+      halfWidth |> toFloat
+
+    minY =
+      negate halfHeight |> toFloat
+
+    maxY =
+      halfHeight |> toFloat
+
+    minDimension =
+      List.minimum [width, height] |> Maybe.withDefault 20
+
+    squareWidth =
+      (minDimension // rows) - ((rows - 1) * gutter) |> toFloat
+
+    halfSquareWidth =
+      squareWidth / 2
+
+    boardWidth =
+      (squareWidth * rows) + (gutter * (rows - 1))
+
+    halfBoardWidth =
+      boardWidth / 2
   in
-    (Viewport
+    Viewport
       width height halfWidth halfHeight
       minDimension minX maxX minY maxY
       squareWidth halfSquareWidth
-      boardWidth halfBoardWidth)
+      boardWidth halfBoardWidth
 
 offset : Int -> Viewport -> Float
 offset pos viewport =
   let
-    leftRight = case pos of
-                 0 -> 1
-                 1 -> 0
-                 2 -> -1
-                 otherwise -> 0
+    leftRight =
+      case pos of
+        0 ->
+          1
+
+        1 ->
+          0
+
+        2 ->
+          -1
+
+        otherwise ->
+          0
+
+    operands =
+      [ (viewport.halfBoardWidth * -1)
+      , ((toFloat pos) * viewport.halfBoardWidth)
+      , (viewport.halfSquareWidth * leftRight)
+      ]
   in
-    [ (viewport.halfBoardWidth * -1)
-    , ((toFloat pos) * viewport.halfBoardWidth)
-    , (viewport.halfSquareWidth * leftRight)
-    ] |> List.foldr (+) 0
+    List.foldr (+) 0 operands
 
 squarePosition : Int -> Int -> Viewport -> (Float,Float)
 squarePosition row col viewport =
   let
-    x = offset col viewport
-    y = offset row viewport
+    x =
+      offset col viewport
+
+    y =
+      offset row viewport
   in
     (,) x y
 
