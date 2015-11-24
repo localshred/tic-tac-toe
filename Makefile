@@ -1,4 +1,4 @@
-ENTRY=TicTacToe.elm
+ENTRY=src/TicTacToe.elm
 
 elm.js: $(ENTRY)
 	elm-make $(ENTRY) --output elm.js

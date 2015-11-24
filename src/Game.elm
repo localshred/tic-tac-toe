@@ -1,4 +1,4 @@
-module TicTacToe where
+module Game where
 
 import Array exposing (initialize, repeat, toList)
 import Color exposing (yellow, gray, blue, green, orange, red)
@@ -9,15 +9,15 @@ import Text exposing (fromString)
 import Window
 import Debug
 
-cols : Int
+cols : number
 cols =
   3
 
-gutter : Int
+gutter : number
 gutter =
   10
 
-rows : Int
+rows : number
 rows =
   3
 
