@@ -3,10 +3,11 @@ module TicTacToe where
 import Array exposing (initialize, repeat, toList)
 import Color exposing (yellow, gray, blue, green, orange, red)
 import Graphics.Collage exposing (Form, toForm, collage, moveY, move, outlined, filled, dashed, square, circle, solid, scale)
-import Graphics.Element exposing (Element, leftAligned)
-import Signal exposing ((<~))
+import Graphics.Element exposing (Element, rightAligned, leftAligned, show)
+import Mouse
 import Text exposing (fromString)
 import Window
+import Debug
 
 cols = 3
 gutter = 10
@@ -28,20 +29,96 @@ type alias Viewport =
   , halfBoardWidth : Float
   }
 
+type Player = X | O
+
+type State =
+  Pending
+  | Started
+  | Winner Player
+  | Stalemate
+
+type alias SquarePosition = (Int,Int,Player)
+
+type alias Game =
+  { selections : List SquarePosition
+  , state : State
+  , nextTurn : Player
+  }
+
+--initGame : Game
+initGame =
+  Game [] Pending X
+
+updateGame : (Int,Int) -> Game -> Game
+updateGame (x,y) previousGame  =
+  { previousGame |
+    nextTurn = switchPlayer previousGame.nextTurn
+    , state = Started
+  }
+
+switchPlayer : Player -> Player
+switchPlayer currentPlayer =
+  case currentPlayer of
+    X ->
+      O
+
+    O ->
+      X
+
 main : Signal Element
 main =
-  drawBoard <~ Window.dimensions
+  let
+    mouseDownSampling = Signal.sampleOn Mouse.isDown Mouse.position
+    game = Signal.foldp updateGame initGame mouseDownSampling
+  in
+    Signal.map3 drawBoard Mouse.position Window.dimensions game
 
-drawBoard : (Int,Int) -> Element
-drawBoard dimensions =
+drawBoard : (Int,Int) -> (Int,Int) -> Game -> Element
+drawBoard mousePosition dimensions game =
   let
     viewport = makeViewport dimensions
     gameRows = makeRows rows cols viewport
     centerCircle = filled yellow (circle 10)
     title = drawTitle viewport
+    gameStateDisplay = gameState viewport game
+    mouseForm = show mousePosition
+              |> toForm
+              |> move ((,) (viewport.minX + 50) (negate (viewport.minY + 30)))
   in
     collage viewport.width viewport.height
-    <| title :: centerCircle :: gameRows
+    <| title :: centerCircle :: mouseForm :: gameStateDisplay :: gameRows
+
+gameState : Viewport -> Game -> Form
+gameState viewport game =
+  let
+    xy = (,) (negate (viewport.minX + 50)) (viewport.minY + 90)
+    state = case game.state of
+              Pending ->
+                "Pending"
+
+              Started ->
+                "Started"
+
+              Winner player ->
+                "Player " ++ playerName player ++ " won!"
+
+              Stalemate ->
+                "Aww shucks, stalemate!"
+  in
+    state
+    |> fromString
+    |> rightAligned
+    |> toForm
+    |> move xy
+
+playerName : Player -> String
+playerName player =
+  case player of
+    X ->
+      "X"
+
+    O ->
+      "O"
 
 drawTitle : Viewport -> Form
 drawTitle viewport =
