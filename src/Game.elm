@@ -1,4 +1,9 @@
-module Game where
+module Game (
+  init
+  , Model
+  , update
+  , view
+  ) where
 
 import Array exposing (initialize, repeat, toList)
 import Color exposing (yellow, gray, blue, green, orange, red)
@@ -35,15 +40,16 @@ type State =
 type alias SquarePosition =
   (Int,Int,Player)
 
-type alias Game =
+type alias Model =
   { selections : List SquarePosition
   , state : State
   , nextTurn : Player
+  , points : List (Float,Float)
   }
 
-init : Game
+init : Model
 init =
-  Game [] Pending X
+  Model [] Pending X []
 
 advanceTurn : Player -> Player
 advanceTurn currentPlayer =
@@ -54,19 +60,9 @@ advanceTurn currentPlayer =
     O ->
       X
 
-main : Signal Element
-main =
-  let
-    mouseDownSampling =
-      Signal.sampleOn Mouse.isDown Mouse.position
-
-    game =
-      Signal.foldp update init mouseDownSampling
-  in
-    Signal.map3 view Mouse.position Window.dimensions game
-
-view : (Int,Int) -> (Int,Int) -> Game -> Element
-view mousePosition dimensions game =
+-- view : (Int,Int) -> (Int,Int) -> Model -> Element
+view : (Int,Int) -> Model -> Element
+view dimensions model =
   let
     viewport =
       Viewport.fromDimensions dimensions rows gutter
@@ -81,37 +77,66 @@ view mousePosition dimensions game =
       drawTitle viewport
 
     gameStateDisplay =
-      gameState viewport game
+      gameState viewport model
 
+{--
     mouseForm =
       mouseView viewport mousePosition
+      --}
 
-    canvas forms =
+    drawCanvas forms =
       collage viewport.width viewport.height forms
 
+    pointForms =
+      List.map (drawPoint viewport) model.points
+
     forms =
-      title :: centerCircle :: mouseForm :: gameStateDisplay :: gameRows
+      (title :: centerCircle :: gameStateDisplay :: gameRows)
+      |> List.append pointForms
+      --(title :: centerCircle :: mouseForm :: gameStateDisplay :: gameRows)
   in
-    canvas forms
+    drawCanvas forms
 
-update : (Int,Int) -> Game -> Game
-update (x,y) previousGame  =
-  { previousGame |
-    nextTurn = advanceTurn previousGame.nextTurn
-    , state = Started
-  }
+drawPoint : Viewport -> (Float,Float) -> Form
+drawPoint viewport (x,y) =
+  let
+    relativeX =
+      x - toFloat viewport.halfWidth
 
+    relativeY =
+      toFloat viewport.halfHeight - y
+
+    relativeXY =
+      (,) relativeX relativeY
+  in
+    filled red (circle 3)
+    |> move (Debug.log "relativeXY" relativeXY)
+
+update : (Int,Int) -> Model -> Model
+update (x,y) previousModel  =
+  let
+    filteredPoints =
+      List.filter (\point -> point /= (0,0)) previousModel.points
+  in
+    { previousModel |
+      nextTurn = advanceTurn previousModel.nextTurn
+      , state = Started
+      , points = (toFloat x, toFloat y) :: filteredPoints
+    }
+
+{--
 mouseView : Viewport -> (Int,Int) -> Form
 mouseView viewport mousePosition =
   show mousePosition
   |> toForm
   |> move ((,) (viewport.minX + 50) (negate (viewport.minY + 30)))
+  --}
 
-gameState : Viewport -> Game -> Form
-gameState viewport game =
+gameState : Viewport -> Model -> Form
+gameState viewport model =
   let
     xy = (,) (negate (viewport.minX + 50)) (viewport.minY + 90)
-    state = case game.state of
+    state = case model.state of
               Pending -> "Pending"
               Started -> "Started"
               Winner player -> "Player " ++ playerName player ++ " won!"
