@@ -16,13 +16,8 @@ import Text exposing (fromString)
 import Viewport exposing (Viewport)
 import Window
 
-gutter : number
-gutter =
-  10
-
-rows : number
-rows =
-  3
+gutter = 10
+rows = 3
 
 main : Signal Element
 main =
@@ -45,40 +40,38 @@ view mousePosition dimensions model =
     gameBoard =
       Game.view viewport model
 
-    title =
-      drawTitle viewport
-
-    gameState =
-      Game.gameState model
-      |> fromString
-      |> leftAligned
-
-    currentPlayer =
-      "Current Turn: " ++ Game.playerName model.currentPlayer
-      |> fromString
-      |> leftAligned
-
     infoSpacer =
       spacer 10 10
 
     boardInfo =
-      flow down [ title
+      flow down [ drawTitleView
       , infoSpacer
-      , gameState
+      , gameStateView model
       , infoSpacer
-      , currentPlayer
+      , currentPlayerView model
       , infoSpacer
       , show mousePosition
       ]
-
   in
     layers [ boardInfo
     , gameBoard
     ]
 
-drawTitle : Viewport -> Element
-drawTitle viewport =
+currentPlayerView : Game.Model -> Element
+currentPlayerView model =
+  "Current Turn: " ++ Game.playerName model.currentPlayer
+  |> fromString
+  |> leftAligned
+
+drawTitleView : Element
+drawTitleView =
   "Tic\nTac\nToe"
+  |> fromString
+  |> leftAligned
+
+gameStateView : Game.Model -> Element
+gameStateView model =
+  Game.gameState model
   |> fromString
   |> leftAligned
 

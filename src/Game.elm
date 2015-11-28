@@ -8,20 +8,9 @@ module Game (
   ) where
 
 import Color exposing (blue, green, red)
-import Debug
 import Graphics.Collage exposing (Form, toForm, collage, moveY, move, outlined, filled, dashed, square, circle, solid, scale)
 import Graphics.Element exposing (Element, rightAligned, leftAligned, show)
-import Text exposing (fromString)
 import Viewport exposing (Viewport)
-import Window
-
-cols : number
-cols =
-  3
-
-rows : number
-rows =
-  3
 
 type Player =
   X | O
@@ -42,35 +31,22 @@ type alias Model =
   , points : List (Float,Float)
   }
 
+cols = 3
+rows = 3
+
+
 init : Model
 init =
   Model [] Pending X []
 
-advanceTurn : Player -> Player
-advanceTurn player =
+nextPlayer : Player -> Player
+nextPlayer player =
   case player of
     X ->
       O
 
     O ->
       X
-
-view : Viewport -> Model -> Element
-view viewport model =
-  let
-    gameRows =
-      makeRows rows cols viewport
-
-    drawCanvas forms =
-      collage viewport.width viewport.height forms
-
-    pointForms =
-      List.map (drawPoint viewport) model.points
-
-    allForms =
-      pointForms ++ gameRows
-  in
-    drawCanvas allForms
 
 drawPoint : Viewport -> (Float,Float) -> Form
 drawPoint viewport (x,y) =
@@ -85,19 +61,7 @@ drawPoint viewport (x,y) =
       (,) relativeX relativeY
   in
     filled red (circle 3)
-    |> move (Debug.log "relativeXY" relativeXY)
-
-update : (Int,Int) -> Model -> Model
-update (x,y) previousModel  =
-  let
-    filteredPoints =
-      List.filter (\point -> point /= (0,0)) previousModel.points
-  in
-    { previousModel |
-      currentPlayer = advanceTurn previousModel.currentPlayer
-      , state = Started
-      , points = (toFloat x, toFloat y) :: filteredPoints
-    }
+    |> move relativeXY
 
 gameState : Model -> String
 gameState model =
@@ -113,15 +77,6 @@ gameState model =
 
         Stalemate ->
             "Aww shucks, stalemate!"
-
-playerName : Player -> String
-playerName player =
-  case player of
-    X ->
-      "X"
-
-    O ->
-      "O"
 
 makeRows : Int -> Int -> Viewport -> List Form
 makeRows rows cols viewport =
@@ -144,6 +99,14 @@ makeSquare row col viewport color =
     outlined (dashed color) (square viewport.squareWidth)
     |> move coordinates
 
+playerName : Player -> String
+playerName player =
+  case player of
+    X ->
+      "X"
+
+    O ->
+      "O"
 
 offset : Int -> Viewport -> Float
 offset pos viewport =
@@ -180,4 +143,33 @@ squarePosition row col viewport =
       offset row viewport
   in
     (,) x y
+
+update : (Int,Int) -> Model -> Model
+update (x,y) previousModel  =
+  let
+    filteredPoints =
+      List.filter (\point -> point /= (0,0)) previousModel.points
+  in
+    { previousModel |
+      currentPlayer = nextPlayer previousModel.currentPlayer
+      , state = Started
+      , points = (toFloat x, toFloat y) :: filteredPoints
+    }
+
+view : Viewport -> Model -> Element
+view viewport model =
+  let
+    gameRows =
+      makeRows rows cols viewport
+
+    drawCanvas forms =
+      collage viewport.width viewport.height forms
+
+    pointForms =
+      List.map (drawPoint viewport) model.points
+
+    allForms =
+      pointForms ++ gameRows
+  in
+    drawCanvas allForms
 
