@@ -1,27 +1,23 @@
 module Game (
-  init
+  gameState
+  , init
   , Model
+  , playerName
   , update
   , view
   ) where
 
-import Array exposing (initialize, repeat, toList)
-import Color exposing (yellow, gray, blue, green, orange, red)
+import Color exposing (blue, green, red)
+import Debug
 import Graphics.Collage exposing (Form, toForm, collage, moveY, move, outlined, filled, dashed, square, circle, solid, scale)
 import Graphics.Element exposing (Element, rightAligned, leftAligned, show)
 import Text exposing (fromString)
-import Window
-import Debug
-
 import Viewport exposing (Viewport)
+import Window
 
 cols : number
 cols =
   3
-
-gutter : number
-gutter =
-  10
 
 rows : number
 rows =
@@ -42,7 +38,7 @@ type alias SquarePosition =
 type alias Model =
   { selections : List SquarePosition
   , state : State
-  , nextTurn : Player
+  , currentPlayer : Player
   , points : List (Float,Float)
   }
 
@@ -51,32 +47,19 @@ init =
   Model [] Pending X []
 
 advanceTurn : Player -> Player
-advanceTurn currentPlayer =
-  case currentPlayer of
+advanceTurn player =
+  case player of
     X ->
       O
 
     O ->
       X
 
--- view : (Int,Int) -> (Int,Int) -> Model -> Element
-view : (Int,Int) -> Model -> Element
-view dimensions model =
+view : Viewport -> Model -> Element
+view viewport model =
   let
-    viewport =
-      Viewport.fromDimensions dimensions rows gutter
-
     gameRows =
       makeRows rows cols viewport
-
-    centerCircle =
-      filled yellow (circle 10)
-
-    title =
-      drawTitle viewport
-
-    gameStateDisplay =
-      gameState viewport model
 
     drawCanvas forms =
       collage viewport.width viewport.height forms
@@ -84,11 +67,10 @@ view dimensions model =
     pointForms =
       List.map (drawPoint viewport) model.points
 
-    forms =
-      (title :: centerCircle :: gameStateDisplay :: gameRows)
-      |> List.append pointForms
+    allForms =
+      pointForms ++ gameRows
   in
-    drawCanvas forms
+    drawCanvas allForms
 
 drawPoint : Viewport -> (Float,Float) -> Form
 drawPoint viewport (x,y) =
@@ -112,46 +94,34 @@ update (x,y) previousModel  =
       List.filter (\point -> point /= (0,0)) previousModel.points
   in
     { previousModel |
-      nextTurn = advanceTurn previousModel.nextTurn
+      currentPlayer = advanceTurn previousModel.currentPlayer
       , state = Started
       , points = (toFloat x, toFloat y) :: filteredPoints
     }
 
-gameState : Viewport -> Model -> Form
-gameState viewport model =
-  let
-    xy = (,) (negate (viewport.minX + 50)) (viewport.minY + 90)
-    state = case model.state of
-              Pending -> "Pending"
-              Started -> "Started"
-              Winner player -> "Player " ++ playerName player ++ " won!"
-              Stalemate -> "Aww shucks, stalemate!"
-  in
-    state
-    |> fromString
-    |> rightAligned
-    |> toForm
-    |> move xy
+gameState : Model -> String
+gameState model =
+    case model.state of
+        Pending ->
+            "Pending"
+
+        Started ->
+            "Started"
+
+        Winner player ->
+            "Player " ++ playerName player ++ " won!"
+
+        Stalemate ->
+            "Aww shucks, stalemate!"
 
 playerName : Player -> String
 playerName player =
   case player of
-    X -> "X"
-    O -> "O"
+    X ->
+      "X"
 
-drawTitle : Viewport -> Form
-drawTitle viewport =
-  let
-    xy = (,) (negate (viewport.minX + 50)) (negate (viewport.minY + 90))
-    possibleScales = [ 1.0, (viewport.minDimension // 225 |> toFloat) ]
-    factor = List.maximum possibleScales |> Maybe.withDefault 1.0
-  in
-    "Tic\nTac\nToe"
-    |> fromString
-    |> leftAligned
-    |> toForm
-    |> move xy
-    |> scale factor
+    O ->
+      "O"
 
 makeRows : Int -> Int -> Viewport -> List Form
 makeRows rows cols viewport =
