@@ -9,7 +9,6 @@ import Array exposing (initialize, repeat, toList)
 import Color exposing (yellow, gray, blue, green, orange, red)
 import Graphics.Collage exposing (Form, toForm, collage, moveY, move, outlined, filled, dashed, square, circle, solid, scale)
 import Graphics.Element exposing (Element, rightAligned, leftAligned, show)
-import Mouse
 import Text exposing (fromString)
 import Window
 import Debug
@@ -79,11 +78,6 @@ view dimensions model =
     gameStateDisplay =
       gameState viewport model
 
-{--
-    mouseForm =
-      mouseView viewport mousePosition
-      --}
-
     drawCanvas forms =
       collage viewport.width viewport.height forms
 
@@ -93,7 +87,6 @@ view dimensions model =
     forms =
       (title :: centerCircle :: gameStateDisplay :: gameRows)
       |> List.append pointForms
-      --(title :: centerCircle :: mouseForm :: gameStateDisplay :: gameRows)
   in
     drawCanvas forms
 
@@ -123,14 +116,6 @@ update (x,y) previousModel  =
       , state = Started
       , points = (toFloat x, toFloat y) :: filteredPoints
     }
-
-{--
-mouseView : Viewport -> (Int,Int) -> Form
-mouseView viewport mousePosition =
-  show mousePosition
-  |> toForm
-  |> move ((,) (viewport.minX + 50) (negate (viewport.minY + 30)))
-  --}
 
 gameState : Viewport -> Model -> Form
 gameState viewport model =
