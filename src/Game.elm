@@ -10,7 +10,6 @@ module Game (
 import Color exposing (blue, green, red)
 import Graphics.Collage exposing (Form, toForm, collage, moveY, move, outlined, filled, dashed, square, circle, solid, scale)
 import Graphics.Element exposing (Element, rightAligned, leftAligned, show)
-import Viewport exposing (Viewport)
 
 type Player =
   X | O
@@ -40,20 +39,6 @@ type alias Model =
 cols = 3
 rows = 3
 
-drawPoint : Viewport -> (Float,Float) -> Form
-drawPoint viewport (x,y) =
-  let
-    relativeX =
-      x - toFloat viewport.halfWidth
-
-    relativeY =
-      toFloat viewport.halfHeight - y
-
-    relativeXY =
-      (,) relativeX relativeY
-  in
-    filled red (circle 3)
-    |> move relativeXY
 
 gameState : Model -> String
 gameState model =
@@ -187,12 +172,6 @@ view viewport model =
 
     drawCanvas forms =
       collage viewport.width viewport.height forms
-
-    pointForms =
-      List.map (drawPoint viewport) model.points
-
-    allForms =
-      pointForms ++ gameRows
   in
-    drawCanvas allForms
+    drawCanvas gameRows
 

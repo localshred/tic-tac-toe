@@ -1,0 +1,57 @@
+body {
+  font-family: "Georgia", serif;
+}
+
+.title {
+}
+
+.game-state {
+}
+
+.current-player {
+}
+
+.info-panel {
+}
+
+.board {
+  max-width: 1000px;
+  margin: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.board .row {
+  flex-direction: row;
+}
+
+.square {
+  width: 150px;
+  height: 150px;
+  margin: 2px;
+  border: 1px solid grey;
+  flex: 0 1 fit-content;
+  text-align: center;
+}
+
+.selectable {
+  cursor: hand;
+}
+
+.selected.player-x {
+  border: 1px solid red;
+  color: red;
+}
+
+.selected.player-o {
+  border: 1px solid blue;
+  color: blue;
+}
+
+.selected.player-x::before {
+  content: "X";
+}
+
+.selected.player-o::before {
+  content: "O";
+}
