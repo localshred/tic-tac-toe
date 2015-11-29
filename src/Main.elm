@@ -59,7 +59,7 @@ update action model =
               Started
 
             Started ->
-              newStateFromUpdatedSelections nextSelections model.state
+              newStateFromUpdatedSelections nextSelections model.state model.currentPlayer
 
             otherwise ->
               model.state
@@ -77,10 +77,13 @@ isStalemate : List Selection -> Bool
 isStalemate selections =
   List.length selections == 9
 
-newStateFromUpdatedSelections : List Selection -> GameState -> GameState
-newStateFromUpdatedSelections selections state =
+newStateFromUpdatedSelections : List Selection -> GameState -> Player -> GameState
+newStateFromUpdatedSelections selections state player =
   if isStalemate selections then
     Stalemate
+
+  else if didPlayerWin player selections then
+    Winner player
 
   else
     state
@@ -97,14 +100,30 @@ winningCombinations p =
   , ((p,0,2),(p,1,2),(p,2,2))
   ]
 
-didXWin : List Selection -> Bool
-didXWin selections =
+didPlayerWin : Player -> List Selection -> Bool
+didPlayerWin player selections =
   let
-    combinations =
-      winningCombinations X
-  in
-    True
+    -- didPlayerWinCombination : (Selection,Selection,Selection) -> Bool
+    didPlayerWinCombination combination =
+      case combination of
+        (node1,node2,node3) ->
+          let
+            nodes = ( List.member node1 selections
+            , List.member node2 selections
+            , List.member node3 selections
+            )
+          in
+            case nodes of
+              (True, True, True) ->
+                True
 
+              otherwise ->
+                False
+
+    combinations =
+      winningCombinations player
+  in
+    List.any didPlayerWinCombination combinations
 
 view : Signal.Address Action -> Model -> Html
 view address model =
@@ -162,9 +181,13 @@ squareBuilder address model row col =
     oIsSelected =
       List.member (O,row,col) model.selections
 
+    isSelectable =
+      (model.state == Pending || model.state == Started)
+      && (not xIsSelected || not oIsSelected)
+
     classes =
       classList [ ("square", True)
-      , ("selectable", not xIsSelected && not oIsSelected)
+      , ("selectable", isSelectable)
       , ("selected", xIsSelected || oIsSelected)
       , ("player-x", xIsSelected)
       , ("player-o", oIsSelected)
