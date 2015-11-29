@@ -21,11 +21,17 @@ type State =
   | Winner Player
   | Stalemate
 
-type alias SquarePosition =
-  (Int,Int,Player)
+type alias Row =
+  Int
+
+type alias Col =
+  Int
+
+type alias Selection =
+  (Row,Col,Player)
 
 type alias Model =
-  { selections : List SquarePosition
+  { selections : List Selection
   , state : State
   , currentPlayer : Player
   , points : List (Float,Float)
@@ -33,20 +39,6 @@ type alias Model =
 
 cols = 3
 rows = 3
-
-
-init : Model
-init =
-  Model [] Pending X []
-
-nextPlayer : Player -> Player
-nextPlayer player =
-  case player of
-    X ->
-      O
-
-    O ->
-      X
 
 drawPoint : Viewport -> (Float,Float) -> Form
 drawPoint viewport (x,y) =
@@ -78,23 +70,54 @@ gameState model =
         Stalemate ->
             "Aww shucks, stalemate!"
 
-makeRows : Int -> Int -> Viewport -> List Form
-makeRows rows cols viewport =
-  [ makeSquare 0 0 viewport green
-  , makeSquare 0 1 viewport green
-  , makeSquare 0 2 viewport green
-  , makeSquare 1 0 viewport blue
-  , makeSquare 1 1 viewport blue
-  , makeSquare 1 2 viewport blue
-  , makeSquare 2 0 viewport red
-  , makeSquare 2 1 viewport red
-  , makeSquare 2 2 viewport red
-  ]
+init : Model
+init =
+  Model [] Pending X []
 
-makeSquare : Int -> Int -> Viewport -> Color.Color -> Form
-makeSquare row col viewport color =
+isPointInSquare : Viewport -> (Int,Int) -> Row -> Col -> Bool
+isPointInSquare viewport (x,y) row col =
+  True -- TODO write this thing
+
+nextPlayer : Player -> Player
+nextPlayer player =
+  case player of
+    X ->
+      O
+
+    O ->
+      X
+
+makeRows : Model -> Viewport -> List Form
+makeRows model viewport =
   let
-    coordinates = squarePosition row col viewport
+    rowSquareMaker color =
+      makeSquare model viewport color
+
+    makeFirstRowSquare n =
+      rowSquareMaker green 0 n
+
+    makeSecondRowSquare n =
+      rowSquareMaker blue 1 n
+
+    makeThirdRowSquare n =
+      rowSquareMaker red 2 n
+  in
+    [ makeFirstRowSquare 0
+    , makeFirstRowSquare 1
+    , makeFirstRowSquare 2
+    , makeSecondRowSquare 0
+    , makeSecondRowSquare 1
+    , makeSecondRowSquare 2
+    , makeThirdRowSquare 0
+    , makeThirdRowSquare 1
+    , makeThirdRowSquare 2
+    ]
+
+makeSquare : Model -> Viewport -> Color.Color -> Int -> Int -> Form
+makeSquare model viewport color row col  =
+  let
+    coordinates =
+      squarePosition row col viewport
   in
     outlined (dashed color) (square viewport.squareWidth)
     |> move coordinates
@@ -160,7 +183,7 @@ view : Viewport -> Model -> Element
 view viewport model =
   let
     gameRows =
-      makeRows rows cols viewport
+      makeRows model viewport
 
     drawCanvas forms =
       collage viewport.width viewport.height forms
