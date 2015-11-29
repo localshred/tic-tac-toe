@@ -1,8 +1,8 @@
 module Main where
 
-import Html exposing (Html, div, text, h1, p)
+import Html exposing (Html, div, text, h1, p, button)
 import Html.Events exposing (onClick)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class, classList, value)
 import StartApp.Simple as StartApp
 
 type Player =
@@ -17,6 +17,7 @@ type alias Col =
 
 type Action =
   SelectSquare Selection
+  | Restart
 
 type GameState =
   Pending
@@ -46,17 +47,64 @@ init =
 
 update : Action ->  Model -> Model
 update action model =
-  let
-    selections =
-      case action of
-        SelectSquare selection ->
+  case action of
+    SelectSquare selection ->
+      let
+        nextSelections =
           selection :: model.selections
+
+        nextState =
+          case model.state of
+            Pending ->
+              Started
+
+            Started ->
+              newStateFromUpdatedSelections nextSelections model.state
+
+            otherwise ->
+              model.state
+      in
+        { model |
+          currentPlayer = nextPlayer model.currentPlayer
+          , state = nextState
+          , selections = nextSelections
+        }
+
+    Restart ->
+      init
+
+isStalemate : List Selection -> Bool
+isStalemate selections =
+  List.length selections == 9
+
+newStateFromUpdatedSelections : List Selection -> GameState -> GameState
+newStateFromUpdatedSelections selections state =
+  if isStalemate selections then
+    Stalemate
+
+  else
+    state
+
+winningCombinations : Player -> List (Selection,Selection,Selection)
+winningCombinations p =
+  [ ((p,0,0),(p,0,1),(p,0,2))
+  , ((p,1,0),(p,1,1),(p,1,2))
+  , ((p,2,0),(p,2,1),(p,2,2))
+  , ((p,0,0),(p,1,1),(p,2,2))
+  , ((p,0,2),(p,1,1),(p,2,0))
+  , ((p,0,0),(p,1,0),(p,2,0))
+  , ((p,0,1),(p,1,1),(p,2,1))
+  , ((p,0,2),(p,1,2),(p,2,2))
+  ]
+
+didXWin : List Selection -> Bool
+didXWin selections =
+  let
+    combinations =
+      winningCombinations X
   in
-    { model |
-      currentPlayer = nextPlayer model.currentPlayer
-      , state = Started
-      , selections = selections
-    }
+    True
+
 
 view : Signal.Address Action -> Model -> Html
 view address model =
@@ -80,12 +128,12 @@ view address model =
                           ]
 
   in
-    div [] [ infoPanel model
+    div [] [ infoPanel address model
     , div [ class "board" ] [ row1, row2, row3 ]
     ]
 
-infoPanel : Model -> Html
-infoPanel model =
+infoPanel : Signal.Address Action -> Model -> Html
+infoPanel address model =
   let
     title =
       h1 [ class "title" ] [ text "Tic Tac Toe" ]
@@ -95,10 +143,14 @@ infoPanel model =
 
     currentPlayer =
       p [ class "current-player" ] [ text <| "Current Player: " ++ playerName model.currentPlayer ]
+
+    restartButton =
+      button [ onClick address Restart ] [ text "Restart" ]
   in
     div [ class "info-panel" ] [ title
     , currentGameState
     , currentPlayer
+    , restartButton
     ]
 
 squareBuilder : Signal.Address Action -> Model -> Row -> Col -> Html
@@ -118,19 +170,20 @@ squareBuilder address model row col =
       , ("player-o", oIsSelected)
       ]
 
-    allowOnClick =
+    disallowOnClick =
       (not (model.state == Pending) && not (model.state == Started))
       || xIsSelected
       || oIsSelected
 
-    attributes =
-      if allowOnClick then
-        [ classes ]
+    onClickAttribute =
+      if not disallowOnClick then
+        [ onClick address <| SelectSquare (model.currentPlayer,row,col) ]
 
       else
-        [ classes
-        , onClick address <| SelectSquare (model.currentPlayer,row,col)
-        ]
+        []
+
+    attributes =
+      classes :: onClickAttribute
   in
     div attributes [ text "" ]
 
