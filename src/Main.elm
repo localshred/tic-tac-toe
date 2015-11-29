@@ -1,9 +1,10 @@
 module Main where
 
-import Html exposing (Html, div, text, h1, p, button)
+import Html exposing (Html, div, text, h1, button, p, span, a)
 import Html.Events exposing (onClick)
-import Html.Attributes exposing (class, classList, value)
+import Html.Attributes exposing (class, classList, value, id, href, style)
 import StartApp.Simple as StartApp
+import String
 
 type Player =
   X
@@ -79,11 +80,11 @@ isStalemate selections =
 
 newStateFromUpdatedSelections : List Selection -> GameState -> Player -> GameState
 newStateFromUpdatedSelections selections state player =
-  if isStalemate selections then
-    Stalemate
-
-  else if didPlayerWin player selections then
+  if didPlayerWin player selections then
     Winner player
+
+  else if isStalemate selections then
+    Stalemate
 
   else
     state
@@ -128,49 +129,71 @@ didPlayerWin player selections =
 view : Signal.Address Action -> Model -> Html
 view address model =
   let
-    row1 =
-      div [ class "row" ] [ squareBuilder address model 0 0
-                          , squareBuilder address model 0 1
-                          , squareBuilder address model 0 2
-                          ]
-
-    row2 =
-      div [ class "row" ] [ squareBuilder address model 1 0
-                          , squareBuilder address model 1 1
-                          , squareBuilder address model 1 2
-                          ]
-
-    row3 =
-      div [ class "row" ] [ squareBuilder address model 2 0
-                          , squareBuilder address model 2 1
-                          , squareBuilder address model 2 2
-                          ]
-
-  in
-    div [] [ infoPanel address model
-    , div [ class "board" ] [ row1, row2, row3 ]
-    ]
-
-infoPanel : Signal.Address Action -> Model -> Html
-infoPanel address model =
-  let
     title =
       h1 [ class "title" ] [ text "Tic Tac Toe" ]
 
-    currentGameState =
-      p [ class "game-state" ] [ text <| "Status: " ++ gameState model ]
+    squaresRow1 =
+      row [ squareBuilder address model 0 0
+      , squareBuilder address model 0 1
+      , squareBuilder address model 0 2
+      ]
 
-    currentPlayer =
-      p [ class "current-player" ] [ text <| "Current Player: " ++ playerName model.currentPlayer ]
+    squaresRow2 =
+      row [ squareBuilder address model 1 0
+      , squareBuilder address model 1 1
+      , squareBuilder address model 1 2
+      ]
+
+    squaresRow3 =
+      row [ squareBuilder address model 2 0
+      , squareBuilder address model 2 1
+      , squareBuilder address model 2 2
+      ]
+
+    currentGameState =
+      div [ class "game-state row-item" ] [ gameState model ]
 
     restartButton =
-      button [ onClick address Restart ] [ text "Restart" ]
+      div [ class "restart-button row-item" , style [ ("text-align","center") ] ]
+        [ p [] [ button [ onClick address Restart ] [ text "Restart Game" ] ] ]
+
+    attribution =
+      div [ class "row-item" , style [ ("text-align","right") ] ]
+        [ p [] [ text "Cobbled together by "
+        , a [ href "https://twitter.com/localshred" ] [ text "@localshred" ]
+        , text " ("
+        , a [ href "https://github.com/localshred/tic-tac-toe/" ] [ text "View Source" ]
+        , text ")"
+        ] ]
+
+    lastRow =
+      div [ class "game-controls row" ] [ currentGameState
+      , restartButton
+      , attribution
+      ]
+
+    boardRows =
+      title :: [ squaresRow1, squaresRow2, squaresRow3 ] ++ [ lastRow ]
+
+    boardClasses =
+      classList [ ("board", True)
+      , (boardCssClass model.state, True)
+      ]
   in
-    div [ class "info-panel" ] [ title
-    , currentGameState
-    , currentPlayer
-    , restartButton
-    ]
+    div [ boardClasses ] boardRows
+
+boardCssClass : GameState -> String
+boardCssClass state =
+  case state of
+    Winner _ ->
+      "winner"
+
+    otherwise ->
+      String.toLower <| toString state
+
+row : List Html -> Html
+row children =
+  div [ class "row" ] children
 
 squareBuilder : Signal.Address Action -> Model -> Row -> Col -> Html
 squareBuilder address model row col =
@@ -187,6 +210,7 @@ squareBuilder address model row col =
 
     classes =
       classList [ ("square", True)
+      , ("row-item", True)
       , ("selectable", isSelectable)
       , ("selected", xIsSelected || oIsSelected)
       , ("player-x", xIsSelected)
@@ -205,25 +229,45 @@ squareBuilder address model row col =
       else
         []
 
+    idAttr =
+      id <| "square-" ++ toString row ++ "-" ++ toString col
+
     attributes =
-      classes :: onClickAttribute
+      idAttr :: classes :: onClickAttribute
   in
     div attributes [ text "" ]
 
-gameState : Model -> String
+cssClassForPlayer : Player -> String
+cssClassForPlayer player =
+  "player-" ++ (String.toLower <| toString player)
+
+gameState : Model -> Html
 gameState model =
-  case model.state of
-    Pending ->
-      "Waiting for player " ++ playerName model.currentPlayer ++ " to begin..."
+  let
+    coloredPlayerName player =
+      span [ class <| cssClassForPlayer player ] [ text <| playerName player ]
+  in
+    case model.state of
+      Pending ->
+        p [] [ text "Waiting on player "
+        , coloredPlayerName model.currentPlayer
+        , text " to begin..."
+        ]
 
-    Started ->
-      "Started"
+      Started ->
+        p [] [ text "Player "
+        , coloredPlayerName model.currentPlayer
+        , text ", it is your turn"
+        ]
 
-    Winner player ->
-      "Player " ++ playerName player ++ " won!"
+      Winner player ->
+        p [] [ text "Player "
+        , coloredPlayerName player
+        , text " won!"
+        ]
 
-    Stalemate ->
-      "Aww shucks, stalemate!"
+      Stalemate ->
+        text "Aww shucks, stalemate!"
 
 nextPlayer : Player -> Player
 nextPlayer player =
