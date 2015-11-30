@@ -1,7 +1,7 @@
 module UI (..) where
 
-import Html exposing (Html, Attribute, button, text)
-import Html.Attributes exposing (class)
+import Html exposing (..)
+import Html.Attributes exposing (..)
 
 pureButton : Attribute -> String -> Html
 pureButton onClickHandler buttonText =
