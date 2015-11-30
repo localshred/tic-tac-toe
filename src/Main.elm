@@ -1,8 +1,8 @@
 module Main where
 
-import Html exposing (Html, div, text, h1, button, p, span, a)
+import Html exposing (Html, div, text, h1, button, p, span, a, header, footer, nav)
 import Html.Events exposing (onClick)
-import Html.Attributes exposing (class, classList, value, id, style)
+import Html.Attributes exposing (class, classList, value, id, style, href)
 import StartApp.Simple as StartApp
 import Games.TicTacToe as TicTacToe
 import UI
@@ -43,9 +43,6 @@ update action model =
 view : Signal.Address Action -> Model -> Html
 view address model =
   let
-    title =
-      h1 [ class "title" ] [ text "@localshred Gaming, Inc." ]
-
     gameWrapperClasses =
       classList [ ("game", True)
       , ("game-selector", model.selectedGame == NoGame)
@@ -60,9 +57,24 @@ view address model =
         TicTacToe ->
           TicTacToe.view (Signal.forwardTo address TicTacToeEvent) model.ticTacToeModel
   in
-    div [] [ title
-    , gameSelectorMenu address
-    , div [ gameWrapperClasses ] [ gameView ]
+    div [] [
+      header [] [
+        h1 [ class "title" ] [
+          text "@localshred Gaming, Inc."
+        ]
+      , gameSelectorMenu address
+      ]
+      , div [ gameWrapperClasses ] [
+        gameView
+      ]
+      , footer [] [
+        p [] [ text "Cobbled together by "
+        , a [ href "https://twitter.com/localshred" ] [ text "@localshred" ]
+        , text " ("
+        , a [ href "https://github.com/localshred/tic-tac-toe/" ] [ text "View Source" ]
+        , text ")"
+        ]
+      ]
     ]
 
 gameSelectorMenu : Signal.Address Action -> Html
@@ -71,7 +83,7 @@ gameSelectorMenu address =
     ticTacToeButton =
       UI.pureButton (onClick address (ChangeGame TicTacToe)) "Tic-Tac-Toe"
   in
-    div [ class "game-selector-menu" ] [ ticTacToeButton
+    nav [ class "game-selector-menu" ] [ ticTacToeButton
     ]
 
 noGameView : Html

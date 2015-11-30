@@ -4,6 +4,7 @@ import Html exposing (Html, div, text, h1, button, p, span, a)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (class, classList, value, id, href, style)
 import String
+import UI
 
 type Player =
   X
@@ -147,21 +148,11 @@ view address model =
 
     restartButton =
       div [ class "restart-button row-item" , style [ ("text-align","center") ] ]
-        [ p [] [ button [ onClick address Restart ] [ text "Restart Game" ] ] ]
-
-    attribution =
-      div [ class "row-item" , style [ ("text-align","right") ] ]
-        [ p [] [ text "Cobbled together by "
-        , a [ href "https://twitter.com/localshred" ] [ text "@localshred" ]
-        , text " ("
-        , a [ href "https://github.com/localshred/tic-tac-toe/" ] [ text "View Source" ]
-        , text ")"
-        ] ]
+        [ p [] [ UI.pureButton ( onClick address Restart ) "Restart Game" ] ]
 
     lastRow =
       div [ class "game-controls row" ] [ currentGameState
       , restartButton
-      , attribution
       ]
 
     boardRows =
