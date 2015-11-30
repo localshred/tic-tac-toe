@@ -2,10 +2,22 @@ body {
   font-family: "Georgia", serif;
 }
 
+button {
+}
+
 .title {
   width: 100%;
   text-align: center;
   flex: 0 0 100%;
+}
+
+.game-selector-menu {
+  text-align: center;
+}
+
+.no-game {
+  margin-top: 30px;
+  text-align: center;
 }
 
 .game-controls {
