@@ -2,7 +2,7 @@ ENTRY=Main.elm
 OUT_FILE=elm.js
 
 $(OUT_FILE): $(ENTRY)
-	elm-make $(ENTRY) --output $(OUT_FILE)
+	elm-make --warn --output $(OUT_FILE) $(ENTRY)
 
 watch:
 	watchman-make -p '*.Elm' -t elm.js
