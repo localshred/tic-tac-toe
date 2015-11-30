@@ -1,11 +1,11 @@
-ENTRY=Main.elm
+ENTRY=src/Main.elm
 OUT_FILE=elm.js
 
 $(OUT_FILE): $(ENTRY)
 	elm-make --warn --output $(OUT_FILE) $(ENTRY)
 
 watch:
-	watchman-make -p '*.Elm' -t elm.js
+	watchman-make -p 'src/**/*.Elm' -t elm.js
 
 clean:
 	rm -rf $(OUT_FILE)
