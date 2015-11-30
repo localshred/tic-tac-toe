@@ -1,9 +1,8 @@
-module Main where
+module Games.TicTacToe (Action, Model, view, update, init) where
 
 import Html exposing (Html, div, text, h1, button, p, span, a)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (class, classList, value, id, href, style)
-import StartApp.Simple as StartApp
 import String
 
 type Player =
@@ -34,13 +33,6 @@ type alias Model =
   , state : GameState
   , currentPlayer : Player
   }
-
-main : Signal Html
-main =
-  { model = init
-  , update = update
-  , view = view
-  } |> StartApp.start
 
 init : Model
 init =
