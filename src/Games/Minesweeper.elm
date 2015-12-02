@@ -180,27 +180,27 @@ selectMode mode model =
       , mineCount = 99 }
 
 generateBoard : (Width,Height) -> Int -> List (List Square)
-generateBoard (w,h) mineCount =
+generateBoard (width,height) mineCount =
   let
     totalSquareCount =
-      w * h
+      width * height
 
     mineLocationGenerator =
       Random.list mineCount (Random.int 0 <| totalSquareCount + 1)
 
     mineCellNumbers =
-      Debug.log "randomInts" <|
-        (Random.generate mineLocationGenerator (Random.initialSeed 42)
-        |> fst
-        |> List.sort
-        |> List.map (\v -> v - 1))
-
+      (Random.generate mineLocationGenerator (Random.initialSeed 42)
+      |> fst
+      |> List.sort
+      |> List.map (\v -> v - 1))
+      |> Debug.log "randomInts"
 
     mineSquarePositions =
-      List.map (cellNumberToSquarePosition w) mineCellNumbers
+      List.map (cellNumberToSquarePosition width) mineCellNumbers
 
     mineNeighbors =
-      List.foldl (List.append) [] (List.map (neighbors w h) mineSquarePositions)
+      List.map (neighbors width height) mineSquarePositions
+      |> List.foldl (List.append) []
 
     -- makeRow : Int -> Int -> List Square -> List Square
     makeRow row squaresPerRow rowSquares =
@@ -212,14 +212,10 @@ generateBoard (w,h) mineCount =
           nextIndex =
             List.length rowSquares
 
-          translatedCellNumber =
-            (row * squaresPerRow) + nextIndex
-
           squarePos =
             (row, nextIndex)
 
           itemType =
-            --if List.member translatedCellNumber mineLocations then
             if List.member squarePos mineSquarePositions then
               Mine
 
@@ -253,8 +249,8 @@ generateBoard (w,h) mineCount =
           List.append rows [ row ]
           |> makeRows rowCount squaresPerRow
   in
-    Debug.log "board" <| makeRows (Debug.log "height" h) (Debug.log "width" w) []
-
+     makeRows (Debug.log "height" height) (Debug.log "width" width) []
+     |> Debug.log "board"
 
 cellNumberToSquarePosition : Width -> Int -> SquarePos
 cellNumberToSquarePosition width cell =
@@ -268,7 +264,7 @@ cellNumberToSquarePosition width cell =
     (,) row col
 
 neighbors : Width -> Height -> SquarePos -> List SquarePos
-neighbors w h (row,col) =
+neighbors width height (row,col) =
   let
     top = row - 1
     middle = row
@@ -283,8 +279,8 @@ neighbors w h (row,col) =
       , (bottom,left),(bottom,center),(bottom,right)
       ]
 
-    neighborFilter (r,c) =
-      r > -1 && c > -1 && r < h && c < w
+    neighborFilter (row',col') =
+      row' > -1 && col' > -1 && row' < height && col' < width
   in
     List.filter neighborFilter candidates
     |> Debug.log ("neighbors " ++ toString (row,col))
