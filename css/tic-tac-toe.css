@@ -1,50 +1,3 @@
-@import "pure.css";
-@import "minesweeper.css";
-
-body {
-  font-family: "Georgia", serif;
-  background: #ccc;
-}
-
-header {
-  border-bottom: 1px solid #262633;
-  padding: 10px 0;
-  background: #262633;
-  color: #fff;
-}
-
-header nav {
-}
-
-footer {
-  text-align: center;
-  font-size: 10px;
-  color: #777;
-  border-top: 1px solid #262633;
-}
-
-.title {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  text-align: center;
-  flex: 0 0 100%;
-}
-
-.game {
-  padding: 20px;
-  background: #eee;
-  min-height: 500px;
-}
-
-.game-selector-menu {
-  text-align: center;
-}
-
-.no-game {
-  text-align: center;
-}
-
 .game-controls {
   flex: 0 0 100%;
 }
@@ -56,8 +9,8 @@ footer {
 }
 
 .board {
-  width: auto;
-  margin: 0 auto;
+  width: 100%;
+  margin: auto;
 }
 
 .board .row {

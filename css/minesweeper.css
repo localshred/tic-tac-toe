@@ -1,0 +1,24 @@
+.game.minesweeper .square {
+  border-top: 3px solid #ccc;
+  border-left: 3px solid #ccc;
+  border-right: 3px solid #777;
+  border-bottom: 3px solid #777;
+}
+
+.game.minesweeper .beginner .square {
+  width: 35px;
+  height: 35px;
+  font-size: 30px;
+}
+
+.game.minesweeper .intermediate .square {
+  width: 30px;
+  height: 30px;
+  font-size: 25px;
+}
+
+.game.minesweeper .advanced .square {
+  width: 30px;
+  height: 30px;
+  font-size: 20px;
+}
