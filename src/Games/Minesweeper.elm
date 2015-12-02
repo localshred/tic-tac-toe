@@ -5,6 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Random
+import Set exposing (Set)
 import String
 import UI
 
@@ -187,13 +188,21 @@ mineLocationGenerator : Int -> Int -> Random.Generator (List Int)
 mineLocationGenerator count maxSize =
   Random.list count (Random.int 0 <| maxSize + 1)
 
-generateRandomMineCells : Int -> Int -> List Int
-generateRandomMineCells count maxSize =
-  (Random.generate (mineLocationGenerator count maxSize) (Random.initialSeed 42)
-    |> fst
-    |> List.sort
-    |> List.map dec)
-  |> Debug.log "randomInts"
+generateRandomMineCells : Int -> Int -> Int -> Set Int
+generateRandomMineCells count maxSize seed =
+  let
+    randomMines =
+      Debug.log "randomInts" <| (Random.generate (mineLocationGenerator count maxSize) (Random.initialSeed seed)
+      |> fst
+      |> List.sort
+      |> List.map dec
+      |> Set.fromList)
+  in
+    if Set.size randomMines < count then
+      generateRandomMineCells count maxSize (seed + 1)
+
+    else
+      randomMines
 
 generateBoard : (Width,Height) -> Int -> List (List Square)
 generateBoard (width,height) mineCount =
@@ -202,7 +211,8 @@ generateBoard (width,height) mineCount =
       width * height
 
     mineSquarePositions =
-      List.map (cellNumberToSquarePosition width) (generateRandomMineCells mineCount totalSquareCount)
+      Set.map (cellNumberToSquarePosition width) (generateRandomMineCells mineCount totalSquareCount 42)
+      |> Set.toList
 
     mineNeighbors =
       List.map (neighbors width height) mineSquarePositions
