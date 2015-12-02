@@ -188,18 +188,21 @@ mineLocationGenerator : Int -> Int -> Random.Generator (List Int)
 mineLocationGenerator count maxSize =
   Random.list count (Random.int 0 <| maxSize + 1)
 
-generateRandomMineCells : Int -> Int -> Int -> Set Int
-generateRandomMineCells count maxSize seed =
+generateRandomMineCells : Int -> Int -> Int -> Set Int -> Set Int
+generateRandomMineCells count maxSize seed initialMines =
   let
     randomMines =
       Debug.log "randomInts" <| (Random.generate (mineLocationGenerator count maxSize) (Random.initialSeed seed)
       |> fst
       |> List.sort
       |> List.map dec
-      |> Set.fromList)
+      |> Set.fromList
+      |> Set.union initialMines)
+
+    missingMinesCount = count - (Set.size randomMines)
   in
-    if Set.size randomMines < count then
-      generateRandomMineCells count maxSize (seed + 1)
+    if missingMinesCount > 0 then
+      generateRandomMineCells missingMinesCount maxSize (seed + 1) randomMines
 
     else
       randomMines
@@ -211,7 +214,7 @@ generateBoard (width,height) mineCount =
       width * height
 
     mineSquarePositions =
-      Set.map (cellNumberToSquarePosition width) (generateRandomMineCells mineCount totalSquareCount 42)
+      Set.map (cellNumberToSquarePosition width) (generateRandomMineCells mineCount totalSquareCount 42 Set.empty)
       |> Set.toList
 
     mineNeighbors =
