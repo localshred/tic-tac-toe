@@ -179,24 +179,30 @@ selectMode mode model =
       , dimensions = (30,16)
       , mineCount = 99 }
 
+dec : Int -> Int
+dec v =
+  v - 1
+
+mineLocationGenerator : Int -> Int -> Random.Generator (List Int)
+mineLocationGenerator count maxSize =
+  Random.list count (Random.int 0 <| maxSize + 1)
+
+generateRandomMineCells : Int -> Int -> List Int
+generateRandomMineCells count maxSize =
+  (Random.generate (mineLocationGenerator count maxSize) (Random.initialSeed 42)
+    |> fst
+    |> List.sort
+    |> List.map dec)
+  |> Debug.log "randomInts"
+
 generateBoard : (Width,Height) -> Int -> List (List Square)
 generateBoard (width,height) mineCount =
   let
     totalSquareCount =
       width * height
 
-    mineLocationGenerator =
-      Random.list mineCount (Random.int 0 <| totalSquareCount + 1)
-
-    mineCellNumbers =
-      (Random.generate mineLocationGenerator (Random.initialSeed 42)
-      |> fst
-      |> List.sort
-      |> List.map (\v -> v - 1))
-      |> Debug.log "randomInts"
-
     mineSquarePositions =
-      List.map (cellNumberToSquarePosition width) mineCellNumbers
+      List.map (cellNumberToSquarePosition width) (generateRandomMineCells mineCount totalSquareCount)
 
     mineNeighbors =
       List.map (neighbors width height) mineSquarePositions
