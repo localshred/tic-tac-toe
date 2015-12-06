@@ -32,6 +32,7 @@ type Content =
 type FlagType =
   Flag
   | Question
+  | Incorrect
 
 type Visibility =
   Covered
@@ -123,10 +124,10 @@ boardView address model =
 
     controlRow =
       div [ class "row" ] [
-        text <| "Clock"
+        score model
         , text <| stateText
         , UI.pureButton (onClick address Restart) ":)"
-        , score model
+        , div [ class "clock" ] [ text "000" ]
       ]
 
     gameInfo =
@@ -439,5 +440,3 @@ neighbors width height (row,col) =
   in
     List.filter neighborFilter candidates
     |> Debug.log ("neighbors " ++ toString (row,col))
-
-

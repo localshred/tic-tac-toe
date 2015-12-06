@@ -1,4 +1,5 @@
-.game.minesweeper .score {
+.game.minesweeper .score,
+.game.minesweeper .clock {
   background-color: black;
   color: red;
   width: 35px;
