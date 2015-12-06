@@ -196,7 +196,9 @@ printSquare address model square =
       onClick address (SelectSquare square)
 
     squareAttributes =
-      if model.state == Started then
+      if model.state == Started && content == (Touching 0) && visibility == Uncovered then
+        [ classes ]
+      else if model.state == Started then
         [ classes, onClickHandler ]
       else
         [ classes ]
@@ -237,6 +239,16 @@ updateSelectedSquare (selectedPos, selectedContent, selectedVisibility) (pos, co
   else
     (pos, content, visibility)
 
+
+{-
+TODO:
+  [√] covered -> touching > 0 -> uncover this square
+  [√] covered -> mine -> explode all mines
+  [ ] covered -> touching 0 -> uncover this square and all neighbors that are not mines, recursively
+  [ ] uncovered -> touching 0 -> do nothing
+  [ ] uncovered -> touching > 0 && neighbor flag count != touching count -> peek while mouse is down
+  [ ] uncovered -> touch > 0 && neighbor flag count == touching count -> uncover all neighbors
+-}
 updateSquareSelection : Model -> Square -> Model
 updateSquareSelection model square =
   let
@@ -277,7 +289,6 @@ mineExploded model square =
 
 uncoverSquare : Model -> Square -> Model
 uncoverSquare model square =
-  -- TODO recursive uncover neighbors if uncovered and is a 0
   let
     updateRow row =
       List.map (updateSelectedSquare square) row
