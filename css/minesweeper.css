@@ -1,8 +1,39 @@
-.game.minesweeper .square {
+.game.minesweeper .score {
+  background-color: black;
+  color: red;
+  width: 35px;
+  height: 35px;
+  border: 1px solid grey;
+  text-align: center;
+  font-size: 30px;
+}
+
+.game.minesweeper .square.covered {
   border-top: 3px solid #ccc;
   border-left: 3px solid #ccc;
   border-right: 3px solid #777;
   border-bottom: 3px solid #777;
+}
+
+.game.minesweeper .square.uncovered {
+  border-top: 1px solid #ccc;
+  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  background-color: #f1eed3;
+  padding: 2px;
+}
+
+.game.minesweeper .square.flagged {
+}
+
+.game.minesweeper .square.peek {
+  border-top: 1px solid #ccc;
+  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  background-color: #bada55;
+  padding: 2px;
 }
 
 .game.minesweeper .beginner .square {
@@ -21,4 +52,43 @@
   width: 30px;
   height: 30px;
   font-size: 20px;
+}
+
+.game.minesweeper .square.exploded-mine {
+  background-color: red;
+}
+
+.game.minesweeper .square.touching0 {
+}
+
+.game.minesweeper .square.touching1 {
+  color: blue;
+}
+
+.game.minesweeper .square.touching2 {
+  color: green;
+}
+
+.game.minesweeper .square.touching3 {
+  color: red;
+}
+
+.game.minesweeper .square.touching4 {
+  color: purple;
+}
+
+.game.minesweeper .square.touching5 {
+  color: brown;
+}
+
+.game.minesweeper .square.touching6 {
+  color: turquoise;
+}
+
+.game.minesweeper .square.touching7 {
+  color: tomato;
+}
+
+.game.minesweeper .square.touching8 {
+  color: orange;
 }

@@ -25,15 +25,19 @@ type alias SquarePos =
   (Row,Col)
 
 type Content =
-  PendingMineLayout
-  | Touching Int
+  Touching Int
   | Mine
+  | ExplodedMine
+
+type FlagType =
+  Flag
+  | Question
 
 type Visibility =
-  Hidden
-  | Flagged
-  | Peeking
-  | Visible
+  Covered
+  | Uncovered
+  | Flagged FlagType
+  | Peek
 
 type alias Square =
   (SquarePos,Content,Visibility)
@@ -52,8 +56,9 @@ type Mode =
 type Action =
   Restart
   | ModeSelect Mode
-  | SelectSquare SquarePos
-  | PeekSquare SquarePos
+  | SelectSquare Square
+  | FlagSquare Square
+  | PeekSquare Square
 
 type alias Model =
   { state : GameState
@@ -66,20 +71,18 @@ type alias Model =
 init : Model
 init =
   Model Pending Beginner (0,0) 0 []
+  |> update (ModeSelect Beginner) -- FIXME remove this to get back to allowing mode selection
 
 view : Signal.Address Action -> Model -> Html
 view address model =
   let
-    boardView =
+    board =
       case model.state of
         Pending ->
           pendingView address model
 
-        Started ->
-          playingView address model
-
         otherwise ->
-          gameOverView address model
+          boardView address model
 
     boardClasses =
       classList [ ("board", True)
@@ -87,7 +90,7 @@ view address model =
       , (String.toLower <| toString model.mode, True)
       ]
   in
-    div [ boardClasses ] [ boardView ]
+    div [ boardClasses ] [ board ]
 
 pendingView : Signal.Address Action -> Model -> Html
 pendingView address model =
@@ -98,52 +101,114 @@ pendingView address model =
     , UI.pureButton (onClick address (ModeSelect Advanced)) "Advanced"
   ]
 
-playingView : Signal.Address Action -> Model -> Html
-playingView address model =
+boardView : Signal.Address Action -> Model -> Html
+boardView address model =
   let
-    printedRows =
-      div [] <| List.map printRow model.board
+    boardRows =
+      div [] <| List.map (printRow address model) model.board
+
+    stateText =
+      case model.state of
+        Started ->
+          "Playing " ++ toString model.mode ++ " mode!"
+
+        Win ->
+          "You totally won!"
+
+        Loss ->
+          "You totally lost!"
+
+        Pending ->
+          "Start the game already!"
 
     controlRow =
       div [ class "row" ] [
         text <| "Clock"
-        , text <| "Playing! " ++ toString model.mode
+        , text <| stateText
         , UI.pureButton (onClick address Restart) ":)"
-        , text <| "Score"
+        , score model
+      ]
+
+    gameInfo =
+      ul [ class "game-info" ] [
+        li [] [ text "Left click to uncover a square." ]
+        , li [] [ text "Right click to plant a flag over a suspected mine. Right click again to make it a question mark." ]
+        , li [] [ text "The game is won when all squares not containing mines have been uncovered." ]
       ]
 
   in
-    div [] <| controlRow :: printedRows :: []
+    div [] <| controlRow :: boardRows :: gameInfo :: []
 
-printSquare : Square -> Html
-printSquare square =
+score : Model -> Html
+score model =
+  let
+    flaggedCount =
+      case model.state of
+        Started ->
+          List.concat model.board
+          |> List.filter (\(_,_,visibility) -> visibility == Flagged Flag)
+          |> List.length
+
+        otherwise ->
+          999
+  in
+    div [ class "score" ] [
+      text <| toString flaggedCount
+    ]
+
+printSquare : Signal.Address Action -> Model -> Square -> Html
+printSquare address model square =
   let
     (pos, content, visibility) =
       square
 
+    classes = classList [ ("square", True)
+    , ("flagged flagged-flag", visibility == Flagged Flag)
+    , ("flagged flagged-question", visibility == Flagged Question)
+    , ("covered", visibility == Covered)
+    , ("peek", visibility == Peek)
+    , ("uncovered", visibility == Uncovered)
+    , ("mine", content == Mine)
+    , ("exploded-mine", content == ExplodedMine)
+    , ("touching touching0", content == (Touching 0))
+    , ("touching touching1", content == (Touching 1))
+    , ("touching touching2", content == (Touching 2))
+    , ("touching touching3", content == (Touching 3))
+    , ("touching touching4", content == (Touching 4))
+    , ("touching touching5", content == (Touching 5))
+    , ("touching touching6", content == (Touching 6))
+    , ("touching touching7", content == (Touching 7))
+    , ("touching touching8", content == (Touching 8))
+    ]
+
     marker =
       case content of
-        PendingMineLayout ->
-          "P"
-
         Touching count ->
           toString count
 
         Mine ->
-          "X"
+          "ø"
+
+        ExplodedMine ->
+          "✱"
+
+    onClickHandler =
+      onClick address (SelectSquare square)
+
+    squareAttributes =
+      if model.state == Started then
+        [ classes, onClickHandler ]
+      else
+        [ classes ]
   in
-    div [ class "square" ] [
+    div squareAttributes [
       text marker
     ]
 
-printRow : List Square -> Html
-printRow squares =
-  List.map printSquare squares
+printRow : Signal.Address Action -> Model -> List Square -> Html
+printRow address model squares =
+  List.map (printSquare address model) squares
   |> div [ class "row" ]
-
-gameOverView : Signal.Address Action -> Model -> Html
-gameOverView address model =
-  div [] [ text "Game over!" ]
 
 update : Action -> Model -> Model
 update action model =
@@ -159,8 +224,68 @@ update action model =
     Restart ->
       init
 
+    SelectSquare square ->
+      updateSquareSelection model square
+
     otherwise ->
       model
+
+updateSelectedSquare : Square -> Square -> Square
+updateSelectedSquare (selectedPos, selectedContent, selectedVisibility) (pos, content, visibility) =
+  if selectedPos == pos then
+    (selectedPos, selectedContent, Uncovered)
+  else
+    (pos, content, visibility)
+
+updateSquareSelection : Model -> Square -> Model
+updateSquareSelection model square =
+  let
+    (_, content, _) =
+      square
+  in
+    case content of
+      Touching count ->
+        uncoverSquare model square
+
+      Mine ->
+        mineExploded model square
+
+      otherwise ->
+        model
+
+mineExploded : Model -> Square -> Model
+mineExploded model square =
+  let
+    (pos, _, _) =
+      square
+
+    squareExploded (pos', content', _) =
+      if pos == pos' then
+        (pos, ExplodedMine, Uncovered)
+      else
+        (pos, content', Uncovered)
+
+    updateRow row =
+      List.map squareExploded row
+
+    updatedBoard =
+      List.map updateRow model.board
+  in
+    { model | board = updatedBoard
+    , state = Loss
+    }
+
+uncoverSquare : Model -> Square -> Model
+uncoverSquare model square =
+  -- TODO recursive uncover neighbors if uncovered and is a 0
+  let
+    updateRow row =
+      List.map (updateSelectedSquare square) row
+
+    updatedBoard =
+      List.map updateRow model.board
+  in
+    { model | board = updatedBoard }
 
 selectMode : Mode -> Model -> Model
 selectMode mode model =
@@ -247,7 +372,7 @@ generateBoard (width,height) mineCount =
                 Touching touchingCount
 
           square =
-            (squarePos, itemType, Hidden)
+            (squarePos, itemType, Covered)
         in
           List.append rowSquares [ square ]
           |> makeRow row squaresPerRow

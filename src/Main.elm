@@ -34,6 +34,7 @@ main =
 init : Model
 init =
   Model NoGame Minesweeper.init TicTacToe.init
+  |> update (ChangeGame Minesweeper) -- FIXME remove this to get back to game selector screen
 
 update : Action ->  Model -> Model
 update action model =
