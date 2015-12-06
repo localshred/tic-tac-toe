@@ -150,8 +150,11 @@ score model =
           |> List.filter (\(_,_,visibility) -> visibility == Flagged Flag)
           |> List.length
 
+        Win ->
+          model.mineCount
+
         otherwise ->
-          999
+          0
   in
     div [ class "score" ] [
       text <| toString flaggedCount
@@ -229,9 +232,33 @@ update action model =
 
     SelectSquare square ->
       updateSquareSelection model square
+      |> promoteToWin
 
     otherwise ->
       model
+
+promoteToWin : Model -> Model
+promoteToWin model =
+  let
+    uncoveredCount =
+      List.concat model.board
+      |> List.filter (\(_, _, visibility) -> visibility == Uncovered)
+      |> List.length
+
+    squareCount =
+      (fst model.dimensions) * (snd model.dimensions)
+
+    uncoveredSquareCountTriggeringWin =
+      squareCount - model.mineCount
+
+    state =
+      if uncoveredCount == uncoveredSquareCountTriggeringWin then
+        Win
+
+      else
+        model.state
+  in
+    { model | state = state }
 
 updateSelectedSquare : Square -> Square -> Square
 updateSelectedSquare (selectedPos, selectedContent, selectedVisibility) (pos, content, visibility) =
