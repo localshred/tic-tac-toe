@@ -9,32 +9,32 @@
   font-size: 30px;
 }
 
-.game.minesweeper .square.covered {
+.game.minesweeper .square.covered,
+.game.minesweeper .square.flagged {
   border-top: 3px solid #ccc;
   border-left: 3px solid #ccc;
   border-right: 3px solid #777;
   border-bottom: 3px solid #777;
 }
 
-.game.minesweeper .square.uncovered {
-  border-top: 1px solid #ccc;
-  border-left: 1px solid #ccc;
-  border-right: 1px solid #ccc;
-  border-bottom: 1px solid #ccc;
-  background-color: #f1eed3;
-  padding: 2px;
-}
-
-.game.minesweeper .square.flagged {
-}
-
+.game.minesweeper .square.uncovered,
 .game.minesweeper .square.peek {
   border-top: 1px solid #ccc;
   border-left: 1px solid #ccc;
   border-right: 1px solid #ccc;
   border-bottom: 1px solid #ccc;
-  background-color: #bada55;
   padding: 2px;
+}
+
+.game.minesweeper .square.uncovered {
+  color: #f1eed3;
+}
+
+.game.minesweeper .square.peek {
+  background-color: #bada55;
+}
+
+.game.minesweeper .square.flagged {
 }
 
 .game.minesweeper .beginner .square {

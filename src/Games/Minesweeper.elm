@@ -126,7 +126,7 @@ boardView address model =
       div [ class "row" ] [
         score model
         , text <| stateText
-        , UI.pureButton (onClick address Restart) ":)"
+        , UI.pureButton (onClick address Restart) "🙂"
         , div [ class "clock" ] [ text "000" ]
       ]
 
@@ -149,12 +149,13 @@ score model =
           List.concat model.board
           |> List.filter (\(_,_,visibility) -> visibility == Flagged Flag)
           |> List.length
+          |> (-) model.mineCount
 
         Win ->
-          model.mineCount
+          0
 
         otherwise ->
-          0
+          model.mineCount
   in
     div [ class "score" ] [
       text <| toString flaggedCount
@@ -169,6 +170,7 @@ printSquare address model square =
     classes = classList [ ("square", True)
     , ("flagged flagged-flag", visibility == Flagged Flag)
     , ("flagged flagged-question", visibility == Flagged Question)
+    , ("flagged flagged-incorrect", visibility == Flagged Incorrect)
     , ("covered", visibility == Covered)
     , ("peek", visibility == Peek)
     , ("uncovered", visibility == Uncovered)
@@ -185,17 +187,6 @@ printSquare address model square =
     , ("touching touching8", content == (Touching 8))
     ]
 
-    marker =
-      case content of
-        Touching count ->
-          toString count
-
-        Mine ->
-          "ø"
-
-        ExplodedMine ->
-          "✱"
-
     onClickHandler =
       onClick address (SelectSquare square)
 
@@ -208,8 +199,41 @@ printSquare address model square =
         [ classes ]
   in
     div squareAttributes [
-      text marker
+      text <| marker square
     ]
+
+marker : Square -> String
+marker (pos, content, visibility) =
+  case visibility of
+    Flagged Flag ->
+      "🚩"
+
+    Flagged Question ->
+      "❓"
+
+    Flagged Incorrect ->
+      "❌"
+
+    Uncovered ->
+      case content of
+        Touching count ->
+          if count == 0 then
+            ""
+
+          else
+            toString count
+
+        Mine ->
+          "💣"
+
+        ExplodedMine ->
+          "💥"
+
+    Covered ->
+      ""
+
+    Peek ->
+      ""
 
 printRow : Signal.Address Action -> Model -> List Square -> Html
 printRow address model squares =
@@ -251,14 +275,34 @@ promoteToWin model =
     uncoveredSquareCountTriggeringWin =
       squareCount - model.mineCount
 
-    state =
+    model' =
       if uncoveredCount == uncoveredSquareCountTriggeringWin then
-        Win
+        { model | state = Win
+        , board = flagAllMines model.board
+        }
 
       else
-        model.state
+        model
   in
-    { model | state = state }
+    model'
+
+flagAllMines : List (List Square) -> List (List Square)
+flagAllMines rows =
+  let
+    flagMineSquare (pos, content, visibility) =
+      if content == Mine then
+        (pos, Mine, Flagged Flag)
+      else
+        (pos, content, visibility)
+
+    updateRow squares =
+      List.map flagMineSquare squares
+
+    rows' =
+      List.map updateRow rows
+  in
+    rows'
+
 
 updateSelectedSquare : Square -> Square -> Square
 updateSelectedSquare (selectedPos, selectedContent, selectedVisibility) (pos, content, visibility) =
