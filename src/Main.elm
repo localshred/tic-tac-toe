@@ -1,11 +1,12 @@
 module Main where
 
+import Effects exposing (Effects)
 import Games.Minesweeper as Minesweeper
 import Games.TicTacToe as TicTacToe
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import StartApp.Simple as StartApp
+import StartApp
 import UI
 
 type GameType =
@@ -26,27 +27,41 @@ type alias Model =
 
 main : Signal Html
 main =
-  { model = init
+  app.html
+
+app : StartApp.App Model
+app =
+  StartApp.start { init = init
   , update = update
   , view = view
-  } |> StartApp.start
+  , inputs = []
+  }
 
-init : Model
+init : (Model, Effects Action)
 init =
-  Model NoGame Minesweeper.init TicTacToe.init
-  |> update (ChangeGame Minesweeper) -- FIXME remove this to get back to game selector screen
+  let
+    model =
+      Model NoGame Minesweeper.init TicTacToe.init
+      |> update (ChangeGame Minesweeper) -- FIXME remove this to get back to game selector screen
+      |> fst
+  in
+    (,) model Effects.none
 
-update : Action ->  Model -> Model
+update : Action ->  Model -> (Model, Effects Action)
 update action model =
-  case action of
-    ChangeGame gameType ->
-      { model | selectedGame = gameType }
+  let
+    model' =
+      case action of
+        ChangeGame gameType ->
+          { model | selectedGame = gameType }
 
-    MinesweeperEvent action ->
-      { model | minesweeperModel = Minesweeper.update action model.minesweeperModel }
+        MinesweeperEvent action ->
+          { model | minesweeperModel = Minesweeper.update action model.minesweeperModel }
 
-    TicTacToeEvent action ->
-      { model | ticTacToeModel = TicTacToe.update action model.ticTacToeModel }
+        TicTacToeEvent action ->
+          { model | ticTacToeModel = TicTacToe.update action model.ticTacToeModel }
+  in
+    (,) model' Effects.none
 
 view : Signal.Address Action -> Model -> Html
 view address model =
