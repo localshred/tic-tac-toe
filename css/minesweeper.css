@@ -11,18 +11,13 @@
 
 .game.minesweeper .square.covered,
 .game.minesweeper .square.flagged {
-  border-top: 3px solid #ccc;
-  border-left: 3px solid #ccc;
-  border-right: 3px solid #777;
-  border-bottom: 3px solid #777;
+  border: 3px solid #ccc;
+  border-color: #ccc #777 #777 #ccc;
 }
 
 .game.minesweeper .square.uncovered,
 .game.minesweeper .square.peek {
-  border-top: 1px solid #ccc;
-  border-left: 1px solid #ccc;
-  border-right: 1px solid #ccc;
-  border-bottom: 1px solid #ccc;
+  border: 1px solid #ccc;
   padding: 2px;
 }
 

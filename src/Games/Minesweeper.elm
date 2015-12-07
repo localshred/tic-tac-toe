@@ -41,7 +41,10 @@ type Visibility =
   | Peek
 
 type alias Square =
-  (SquarePos,Content,Visibility)
+  { pos : SquarePos
+  , content : Content
+  , visibility : Visibility
+  }
 
 type GameState =
   Pending
@@ -147,7 +150,7 @@ score model =
       case model.state of
         Started ->
           List.concat model.board
-          |> List.filter (\(_,_,visibility) -> visibility == Flagged Flag)
+          |> List.filter (\square -> square.visibility == Flagged Flag)
           |> List.length
           |> (-) model.mineCount
 
@@ -164,34 +167,32 @@ score model =
 printSquare : Signal.Address Action -> Model -> Square -> Html
 printSquare address model square =
   let
-    (pos, content, visibility) =
-      square
-
-    classes = classList [ ("square", True)
-    , ("flagged flagged-flag", visibility == Flagged Flag)
-    , ("flagged flagged-question", visibility == Flagged Question)
-    , ("flagged flagged-incorrect", visibility == Flagged Incorrect)
-    , ("covered", visibility == Covered)
-    , ("peek", visibility == Peek)
-    , ("uncovered", visibility == Uncovered)
-    , ("mine", content == Mine)
-    , ("exploded-mine", content == ExplodedMine)
-    , ("touching touching0", content == (Touching 0))
-    , ("touching touching1", content == (Touching 1))
-    , ("touching touching2", content == (Touching 2))
-    , ("touching touching3", content == (Touching 3))
-    , ("touching touching4", content == (Touching 4))
-    , ("touching touching5", content == (Touching 5))
-    , ("touching touching6", content == (Touching 6))
-    , ("touching touching7", content == (Touching 7))
-    , ("touching touching8", content == (Touching 8))
-    ]
+    classes =
+      classList [ ("square", True)
+      , ("flagged flagged-flag", square.visibility == Flagged Flag)
+      , ("flagged flagged-question", square.visibility == Flagged Question)
+      , ("flagged flagged-incorrect", square.visibility == Flagged Incorrect)
+      , ("covered", square.visibility == Covered)
+      , ("peek", square.visibility == Peek)
+      , ("uncovered", square.visibility == Uncovered)
+      , ("mine", square.content == Mine)
+      , ("exploded-mine", square.content == ExplodedMine)
+      , ("touching touching0", square.content == (Touching 0))
+      , ("touching touching1", square.content == (Touching 1))
+      , ("touching touching2", square.content == (Touching 2))
+      , ("touching touching3", square.content == (Touching 3))
+      , ("touching touching4", square.content == (Touching 4))
+      , ("touching touching5", square.content == (Touching 5))
+      , ("touching touching6", square.content == (Touching 6))
+      , ("touching touching7", square.content == (Touching 7))
+      , ("touching touching8", square.content == (Touching 8))
+      ]
 
     onClickHandler =
       onClick address (SelectSquare square)
 
     squareAttributes =
-      if model.state == Started && content == (Touching 0) && visibility == Uncovered then
+      if model.state == Started && square.content == (Touching 0) && square.visibility == Uncovered then
         [ classes ]
       else if model.state == Started then
         [ classes, onClickHandler ]
@@ -203,8 +204,8 @@ printSquare address model square =
     ]
 
 marker : Square -> String
-marker (pos, content, visibility) =
-  case visibility of
+marker square =
+  case square.visibility of
     Flagged Flag ->
       "🚩"
 
@@ -215,7 +216,7 @@ marker (pos, content, visibility) =
       "❌"
 
     Uncovered ->
-      case content of
+      case square.content of
         Touching count ->
           if count == 0 then
             ""
@@ -266,7 +267,7 @@ promoteToWin model =
   let
     uncoveredCount =
       List.concat model.board
-      |> List.filter (\(_, _, visibility) -> visibility == Uncovered)
+      |> List.filter (\square -> square.visibility == Uncovered)
       |> List.length
 
     squareCount =
@@ -289,11 +290,11 @@ promoteToWin model =
 flagAllMines : List (List Square) -> List (List Square)
 flagAllMines rows =
   let
-    flagMineSquare (pos, content, visibility) =
-      if content == Mine then
-        (pos, Mine, Flagged Flag)
+    flagMineSquare square =
+      if square.content == Mine then
+        { square | content = Mine, visibility = Flagged Flag }
       else
-        (pos, content, visibility)
+        square
 
     updateRow squares =
       List.map flagMineSquare squares
@@ -304,13 +305,12 @@ flagAllMines rows =
     rows'
 
 
-updateSelectedSquare : Square -> Square -> Square
-updateSelectedSquare (selectedPos, selectedContent, selectedVisibility) (pos, content, visibility) =
-  if selectedPos == pos then
-    (selectedPos, selectedContent, Uncovered)
+uncoverSquare : Square -> Square -> Square
+uncoverSquare selectedSquare square =
+  if selectedSquare.pos == square.pos then
+    { square | visibility = Uncovered }
   else
-    (pos, content, visibility)
-
+    square
 
 {-
 TODO:
@@ -323,31 +323,29 @@ TODO:
 -}
 updateSquareSelection : Model -> Square -> Model
 updateSquareSelection model square =
-  let
-    (_, content, _) =
-      square
-  in
-    case content of
-      Touching count ->
-        uncoverSquare model square
+  case square.content of
+    Touching 0 ->
+      uncoverSquareAndNeighbors model square
+      |> Debug.log "uncoverSquareAndNeighbors"
 
-      Mine ->
-        mineExploded model square
+    Touching count ->
+      uncoverSquareInBoard model square
+      |> Debug.log "uncoverSquareInBoard"
 
-      otherwise ->
-        model
+    Mine ->
+      mineExploded model square
+
+    otherwise ->
+      model
 
 mineExploded : Model -> Square -> Model
 mineExploded model square =
   let
-    (pos, _, _) =
-      square
-
-    squareExploded (pos', content', _) =
-      if pos == pos' then
-        (pos, ExplodedMine, Uncovered)
+    squareExploded square' =
+      if square.pos == square'.pos then
+        { square | content = ExplodedMine, visibility = Uncovered }
       else
-        (pos, content', Uncovered)
+        { square | visibility = Uncovered }
 
     updateRow row =
       List.map squareExploded row
@@ -359,11 +357,44 @@ mineExploded model square =
     , state = Loss
     }
 
-uncoverSquare : Model -> Square -> Model
-uncoverSquare model square =
+uncoverSquareInBoard : Model -> Square -> Model
+uncoverSquareInBoard model square =
   let
     updateRow row =
-      List.map (updateSelectedSquare square) row
+      List.map (uncoverSquare square) row
+
+    updatedBoard =
+      List.map updateRow model.board
+  in
+    { model | board = updatedBoard }
+
+uncoverSquareAndNeighbors : Model -> Square -> Model
+uncoverSquareAndNeighbors model square =
+  let
+    (width, height) =
+      model.dimensions
+
+    squareNeighborPositions =
+      neighbors width height square.pos
+      |> List.foldl (::) []
+      |> (::) square.pos
+
+    findNeighborSquares square' =
+      List.member square'.pos squareNeighborPositions
+
+    neighborSquares =
+      model.board
+      |> List.concat
+      |> List.filter findNeighborSquares
+
+    uncoverAllSquares neighbors' square' =
+      if List.member square' neighbors' then
+        { square' | visibility = Uncovered }
+      else
+        square'
+
+    updateRow row =
+      List.map (uncoverAllSquares neighborSquares) row
 
     updatedBoard =
       List.map updateRow model.board
@@ -442,7 +473,7 @@ generateBoard (width,height) mineCount =
           squarePos =
             (row, nextIndex)
 
-          itemType =
+          content =
             if List.member squarePos mineSquarePositions then
               Mine
 
@@ -455,7 +486,7 @@ generateBoard (width,height) mineCount =
                 Touching touchingCount
 
           square =
-            (squarePos, itemType, Covered)
+            Square squarePos content Covered
         in
           List.append rowSquares [ square ]
           |> makeRow row squaresPerRow
