@@ -310,12 +310,12 @@ flagAllMines rows =
   in
     rows'
 
-uncoverSquare : Square -> Square -> Square
-uncoverSquare selectedSquare square =
-  if selectedSquare.pos == square.pos then
-    { square | visibility = Uncovered }
-  else
-    square
+flaggedNeighboringMineCount : Model -> Square -> Int
+flaggedNeighboringMineCount model square =
+  model.board
+  |> List.concat
+  |> List.filter (\square -> square.visibility == Flagged Flag)
+  |> List.length
 
 {-
 TODO:
@@ -323,8 +323,8 @@ TODO:
   [√] covered -> mine -> explode all mines
   [√] covered -> touching 0 -> uncover this square and all neighbors that are not mines, recursively
   [√] uncovered -> touching 0 -> do nothing
-  [ ] uncovered -> touching > 0 && neighbor flag count != touching count -> peek while mouse is down
-  [ ] uncovered -> touch > 0 && neighbor flag count == touching count -> uncover all neighbors
+  [-] uncovered -> touch > 0 && neighbor flag count == touching count -> uncover all neighbors
+  [-] uncovered -> touching > 0 && neighbor flag count != touching count -> peek while mouse is down
 -}
 updateSquareSelection : Model -> Square -> Model
 updateSquareSelection model square =
@@ -333,7 +333,17 @@ updateSquareSelection model square =
       uncoverSquareAndNeighbors model square
 
     Touching count ->
-      uncoverSquareInBoard model square
+      let
+        flaggedCount =
+          flaggedNeighboringMineCount model square
+      in
+        if count == flaggedCount then
+          -- TODO verify this after we get keyboard flagging in
+          uncoverSquareAndNeighbors model square
+
+        else
+          -- TODO peek while mouse is down
+          uncoverSquareInBoard model square
 
     Mine ->
       mineExploded model square
@@ -341,11 +351,15 @@ updateSquareSelection model square =
     otherwise ->
       model
 
+eqSquare : SquarePos -> SquarePos -> Bool
+eqSquare a b =
+  a == b
+
 mineExploded : Model -> Square -> Model
 mineExploded model square =
   let
     squareExploded square' =
-      if square.pos == square'.pos then
+      if eqSquare square.pos square'.pos then
         { square | content = ExplodedMine, visibility = Uncovered }
       else
         { square' | visibility = Uncovered }
@@ -360,17 +374,6 @@ mineExploded model square =
     , state = Loss
     }
 
-uncoverSquareInBoard : Model -> Square -> Model
-uncoverSquareInBoard model square =
-  let
-    updateRow row =
-      List.map (uncoverSquare square) row
-
-    updatedBoard =
-      List.map updateRow model.board
-  in
-    { model | board = updatedBoard }
-
 linkedTouchingNeighbors : Model -> SquarePos -> TouchingNeighbors -> TouchingNeighbors
 linkedTouchingNeighbors model pos neighborsDict =
   if Dict.member pos neighborsDict then
@@ -381,7 +384,7 @@ linkedTouchingNeighbors model pos neighborsDict =
       squareIsTouching0 =
         model.board
         |> List.concat
-        |> List.filter (\square -> square.pos == pos)
+        |> List.filter (\square -> eqSquare square.pos pos)
         |> List.head
         |> Maybe.map (\square -> square.content == Touching 0)
         |> Maybe.withDefault False
@@ -417,6 +420,31 @@ linkedTouchingNeighbors model pos neighborsDict =
       else
         neighborsDict
 
+uncoverSquare : Square -> Square -> Square
+uncoverSquare selectedSquare square =
+  if selectedSquare.pos == square.pos then
+    { square | visibility = Uncovered }
+  else
+    square
+
+uncoverMatchingSquares : List Square -> Square -> Square
+uncoverMatchingSquares squares square =
+  if List.member square squares then
+    { square | visibility = Uncovered }
+  else
+    square
+
+uncoverSquareInBoard : Model -> Square -> Model
+uncoverSquareInBoard model square =
+  let
+    updateRow row =
+      List.map (uncoverSquare square) row
+
+    updatedBoard =
+      List.map updateRow model.board
+  in
+    { model | board = updatedBoard }
+
 uncoverSquareAndNeighbors : Model -> Square -> Model
 uncoverSquareAndNeighbors model square =
   let
@@ -435,14 +463,8 @@ uncoverSquareAndNeighbors model square =
       |> List.concat
       |> List.filter findNeighborSquares
 
-    uncoverAllSquares neighbors' square' =
-      if List.member square' neighbors' then
-        { square' | visibility = Uncovered }
-      else
-        square'
-
     updateRow row =
-      List.map (uncoverAllSquares neighborSquares) row
+      List.map (uncoverMatchingSquares neighborSquares) row
 
     updatedBoard =
       List.map updateRow model.board
