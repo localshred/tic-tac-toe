@@ -1,6 +1,6 @@
 module Games.Minesweeper (Action, Model, view, update, init) where
 
-import Debug
+import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -64,10 +64,16 @@ type Action =
   | FlagSquare Square
   | PeekSquare Square
 
+type alias Dimensions =
+  (Width, Height)
+
+type alias TouchingNeighbors =
+  Dict SquarePos (List SquarePos)
+
 type alias Model =
   { state : GameState
   , mode : Mode
-  , dimensions : (Width,Height)
+  , dimensions : Dimensions
   , mineCount : Int
   , board : List (List Square)
   }
@@ -292,7 +298,7 @@ flagAllMines rows =
   let
     flagMineSquare square =
       if square.content == Mine then
-        { square | content = Mine, visibility = Flagged Flag }
+        { square | visibility = Flagged Flag }
       else
         square
 
@@ -303,7 +309,6 @@ flagAllMines rows =
       List.map updateRow rows
   in
     rows'
-
 
 uncoverSquare : Square -> Square -> Square
 uncoverSquare selectedSquare square =
@@ -316,8 +321,8 @@ uncoverSquare selectedSquare square =
 TODO:
   [√] covered -> touching > 0 -> uncover this square
   [√] covered -> mine -> explode all mines
-  [ ] covered -> touching 0 -> uncover this square and all neighbors that are not mines, recursively
-  [ ] uncovered -> touching 0 -> do nothing
+  [√] covered -> touching 0 -> uncover this square and all neighbors that are not mines, recursively
+  [√] uncovered -> touching 0 -> do nothing
   [ ] uncovered -> touching > 0 && neighbor flag count != touching count -> peek while mouse is down
   [ ] uncovered -> touch > 0 && neighbor flag count == touching count -> uncover all neighbors
 -}
@@ -326,11 +331,9 @@ updateSquareSelection model square =
   case square.content of
     Touching 0 ->
       uncoverSquareAndNeighbors model square
-      |> Debug.log "uncoverSquareAndNeighbors"
 
     Touching count ->
       uncoverSquareInBoard model square
-      |> Debug.log "uncoverSquareInBoard"
 
     Mine ->
       mineExploded model square
@@ -345,7 +348,7 @@ mineExploded model square =
       if square.pos == square'.pos then
         { square | content = ExplodedMine, visibility = Uncovered }
       else
-        { square | visibility = Uncovered }
+        { square' | visibility = Uncovered }
 
     updateRow row =
       List.map squareExploded row
@@ -368,19 +371,64 @@ uncoverSquareInBoard model square =
   in
     { model | board = updatedBoard }
 
+linkedTouchingNeighbors : Model -> SquarePos -> TouchingNeighbors -> TouchingNeighbors
+linkedTouchingNeighbors model pos neighborsDict =
+  if Dict.member pos neighborsDict then
+    neighborsDict
+
+  else
+    let
+      squareIsTouching0 =
+        model.board
+        |> List.concat
+        |> List.filter (\square -> square.pos == pos)
+        |> List.head
+        |> Maybe.map (\square -> square.content == Touching 0)
+        |> Maybe.withDefault False
+    in
+      if squareIsTouching0 then
+        let
+          neighbors' =
+            neighbors model.dimensions pos
+            |> (::) pos
+
+          neighborIsTouching square =
+            case square.content of
+              Touching n ->
+                List.member square.pos neighbors'
+
+              otherwise ->
+                False
+
+          neighborPositions =
+            model.board
+            |> List.concat
+            |> List.filter neighborIsTouching
+            |> List.map .pos
+
+          currentDict =
+            Dict.insert pos neighborPositions neighborsDict
+
+          neighborsDict' =
+            List.foldl (linkedTouchingNeighbors model) currentDict neighbors'
+        in
+          neighborsDict'
+
+      else
+        neighborsDict
+
 uncoverSquareAndNeighbors : Model -> Square -> Model
 uncoverSquareAndNeighbors model square =
   let
-    (width, height) =
-      model.dimensions
-
-    squareNeighborPositions =
-      neighbors width height square.pos
-      |> List.foldl (::) []
-      |> (::) square.pos
+    linkedNeighbors =
+      linkedTouchingNeighbors model square.pos Dict.empty
+      |> Dict.values
+      |> Set.fromList
+      |> Set.toList
+      |> List.concat
 
     findNeighborSquares square' =
-      List.member square'.pos squareNeighborPositions
+      List.member square'.pos linkedNeighbors
 
     neighborSquares =
       model.board
@@ -431,12 +479,12 @@ generateRandomMineCells : Int -> Int -> Int -> Set Int -> Set Int
 generateRandomMineCells count maxSize seed initialMines =
   let
     randomMines =
-      Debug.log "randomInts" <| (Random.generate (mineLocationGenerator count maxSize) (Random.initialSeed seed)
+      Random.generate (mineLocationGenerator count maxSize) (Random.initialSeed seed)
       |> fst
       |> List.sort
       |> List.map dec
       |> Set.fromList
-      |> Set.union initialMines)
+      |> Set.union initialMines
 
     missingMinesCount = count - (Set.size randomMines)
   in
@@ -457,7 +505,7 @@ generateBoard (width,height) mineCount =
       |> Set.toList
 
     mineNeighbors =
-      List.map (neighbors width height) mineSquarePositions
+      List.map (neighbors (width,height)) mineSquarePositions
       |> List.foldl (List.append) []
 
     -- makeRow : Int -> Int -> List Square -> List Square
@@ -507,8 +555,7 @@ generateBoard (width,height) mineCount =
           List.append rows [ row ]
           |> makeRows rowCount squaresPerRow
   in
-     makeRows (Debug.log "height" height) (Debug.log "width" width) []
-     |> Debug.log "board"
+     makeRows height width []
 
 cellNumberToSquarePosition : Width -> Int -> SquarePos
 cellNumberToSquarePosition width cell =
@@ -521,8 +568,8 @@ cellNumberToSquarePosition width cell =
   in
     (,) row col
 
-neighbors : Width -> Height -> SquarePos -> List SquarePos
-neighbors width height (row,col) =
+neighbors : Dimensions -> SquarePos -> List SquarePos
+neighbors (width, height) (row, col) =
   let
     top = row - 1
     middle = row
@@ -541,4 +588,3 @@ neighbors width height (row,col) =
       row' > -1 && col' > -1 && row' < height && col' < width
   in
     List.filter neighborFilter candidates
-    |> Debug.log ("neighbors " ++ toString (row,col))
