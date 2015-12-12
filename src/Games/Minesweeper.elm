@@ -59,6 +59,7 @@ type Mode =
 
 type Action =
   Restart
+  | MetaKeyDown Bool
   | ModeSelect Mode
   | SelectSquare Square
   | FlagSquare Square
