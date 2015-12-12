@@ -266,6 +266,9 @@ update action model =
       updateSquareSelection model square
       |> promoteToWin
 
+    FlagSquare square ->
+      flagSquareInBoard model square
+
     otherwise ->
       model
 
@@ -421,6 +424,25 @@ linkedTouchingNeighbors model pos neighborsDict =
       else
         neighborsDict
 
+flagSquare : Square -> Square -> Square
+flagSquare selectedSquare square =
+  if selectedSquare.pos /= square.pos then
+    square
+
+  else
+    case selectedSquare.visibility of
+      Uncovered ->
+        { square | visibility = Flagged Flag }
+
+      Flagged Flag ->
+        { square | visibility = Flagged Question }
+
+      Flagged Question ->
+        { square | visibility = Uncovered }
+
+      otherwise ->
+        square
+
 uncoverSquare : Square -> Square -> Square
 uncoverSquare selectedSquare square =
   if selectedSquare.pos == square.pos then
@@ -434,6 +456,17 @@ uncoverMatchingSquares squares square =
     { square | visibility = Uncovered }
   else
     square
+
+flagSquareInBoard : Model -> Square -> Model
+flagSquareInBoard model square =
+  let
+    updateRow row =
+      List.map (uncoverSquare square) row
+
+    updatedBoard =
+      List.map updateRow model.board
+  in
+    { model | board = updatedBoard }
 
 uncoverSquareInBoard : Model -> Square -> Model
 uncoverSquareInBoard model square =
