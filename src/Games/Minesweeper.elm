@@ -139,10 +139,10 @@ boardView address model =
     gameInfo =
       ul [ class "game-info" ] [
         li [] [ text "Left click to uncover a square." ]
-        , li [] [ text "Right click to plant a flag over a suspected mine. Right click again to make it a question mark." ]
+        , li [] [ text "Click and hold on an uncovered square to peek at which neighbors it touches." ]
+        , li [] [ text "⌘ click to plant a flag over a suspected mine. ⌘ click again to make it a question mark." ]
         , li [] [ text "The game is won when all squares not containing mines have been uncovered." ]
       ]
-
   in
     div [] <| controlRow :: boardRows :: gameInfo :: []
 
