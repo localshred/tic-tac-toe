@@ -129,25 +129,24 @@ boardView address model =
     boardRows =
       div [] <| List.map (printRow address model) model.board
 
-    stateText =
+    restartEmoji =
       case model.state of
         Started ->
-          "Playing " ++ toString model.mode ++ " mode!"
+          "🙂"
 
         Win ->
-          "You totally won!"
+          "😎"
 
         Loss ->
-          "You totally lost!"
+          "😭"
 
         Pending ->
-          "Start the game already!"
+          "💤"
 
     controlRow =
-      div [ class "row" ] [
+      div [ class "row controls" ] [
         score model
-        , text <| stateText
-        , UI.pureButton (onClick address Restart) "🙂"
+        , UI.pureButton (onClick address Restart) restartEmoji
         , div [ class "clock" ] [ text "000" ]
       ]
 

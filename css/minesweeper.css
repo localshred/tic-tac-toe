@@ -1,3 +1,8 @@
+.game.minesweeper .controls .pure-button {
+  font-size: 25px;
+  padding: 0 12px;
+}
+
 .game.minesweeper .score,
 .game.minesweeper .clock {
   background-color: black;
@@ -30,9 +35,6 @@
   background-color: #ddd;
 }
 
-.game.minesweeper .square.flagged {
-}
-
 .game.minesweeper .beginner .square {
   width: 35px;
   height: 35px;
@@ -53,9 +55,6 @@
 
 .game.minesweeper .square.exploded-mine {
   background-color: red;
-}
-
-.game.minesweeper .square.touching0 {
 }
 
 .game.minesweeper .square.touching1 {

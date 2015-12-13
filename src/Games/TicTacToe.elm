@@ -148,7 +148,7 @@ view address model =
 
     restartButton =
       div [ class "restart-button row-item" , style [ ("text-align","center") ] ]
-        [ p [] [ UI.pureButton ( onClick address Restart ) "Restart Game" ] ]
+        [ p [] [ UI.pureButton (onClick address Restart) "Restart Game" ] ]
 
     lastRow =
       div [ class "game-controls row" ] [ currentGameState
