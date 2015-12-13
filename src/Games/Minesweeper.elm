@@ -33,13 +33,13 @@ type Content =
 type FlagType =
   Flag
   | Question
-  | Incorrect
 
 type Visibility =
   Covered
   | Uncovered
   | Flagged FlagType
   | Peek
+  | Incorrect
 
 type alias Square =
   { pos : SquarePos
@@ -64,6 +64,7 @@ type Action =
   | ModeSelect Mode
   | SelectSquare Square
   | PeekSquare Square
+  | UncoverNeighborSquares Square
 
 type alias Dimensions =
   (Width, Height)
@@ -80,6 +81,10 @@ type alias Model =
   , metaKeyDown : Bool
   }
 
+{-
+  TODO
+  - [ ] Get time at some value to get a better random seed on new game
+-}
 inputs : List (Signal Action)
 inputs =
   [ Signal.map MetaKeyDown Keyboard.meta
@@ -184,7 +189,7 @@ printSquare address model square =
       classList [ ("square", True)
       , ("flagged flagged-flag", square.visibility == Flagged Flag)
       , ("flagged flagged-question", square.visibility == Flagged Question)
-      , ("flagged flagged-incorrect", square.visibility == Flagged Incorrect)
+      , ("incorrect", square.visibility == Incorrect)
       , ("covered", square.visibility == Covered)
       , ("peek", square.visibility == Peek)
       , ("uncovered", square.visibility == Uncovered)
@@ -201,7 +206,7 @@ printSquare address model square =
       , ("touching touching8", square.content == (Touching 8))
       ]
 
-    uncoverHandler =
+    uncoverSquareHandler =
       onClick address (SelectSquare square)
 
     peekDownHandler =
@@ -210,15 +215,21 @@ printSquare address model square =
     peekUpHandler =
       onMouseUp address (PeekSquare square)
 
+    uncoverNeighborsHandler =
+      onClick address (UncoverNeighborSquares square)
+
     squareAttributes =
       if model.state == Started && square.content == (Touching 0) && square.visibility == Uncovered then
         [ classes ]
 
-      else if model.state == Started && (isTouchingMoreThanZero square) && square.visibility == Uncovered then
+      else if squareNeighborFlagsEqualTouchingCount model square then
+        [ classes, uncoverNeighborsHandler ]
+
+      else if shouldAddPeekHandlers model square then
         [ classes, peekDownHandler, peekUpHandler ]
 
       else if model.state == Started then
-        [ classes, uncoverHandler ]
+        [ classes, uncoverSquareHandler ]
 
       else
         [ classes ]
@@ -226,6 +237,39 @@ printSquare address model square =
     div squareAttributes [
       text <| marker square
     ]
+
+squareNeighborFlagsEqualTouchingCount : Model -> Square -> Bool
+squareNeighborFlagsEqualTouchingCount model square =
+  if square.visibility == Uncovered && isTouchingMoreThanZero square then
+    case square.content of
+      Touching touchingCount ->
+        let
+          linkedNeighborPositions =
+            neighbors model.dimensions square.pos
+
+          findNeighborSquares square' =
+            List.member square'.pos linkedNeighborPositions
+              && square'.visibility == Flagged Flag
+
+          flaggedCount =
+            model.board
+            |> List.concat
+            |> List.filter findNeighborSquares
+            |> List.length
+        in
+          touchingCount == flaggedCount
+
+      otherwise ->
+        False
+
+  else
+    False
+
+shouldAddPeekHandlers : Model -> Square -> Bool
+shouldAddPeekHandlers model square =
+  model.state == Started
+    && (isTouchingMoreThanZero square)
+    && square.visibility == Uncovered
 
 isTouchingMoreThanZero : Square -> Bool
 isTouchingMoreThanZero square =
@@ -248,7 +292,7 @@ marker square =
     Flagged Question ->
       "❓"
 
-    Flagged Incorrect ->
+    Incorrect ->
       "❌"
 
     Uncovered ->
@@ -297,13 +341,51 @@ update action model =
 
       else
         updateSquareSelection model square
-        |> promoteToWin
+        |> promoteToWinOrLoss
 
     PeekSquare square ->
       peekSquareNeighbors model square
 
+    UncoverNeighborSquares square ->
+      uncoverSquareNeighbors model square
+      |> promoteToWinOrLoss
+
     MetaKeyDown keyState ->
       { model | metaKeyDown = keyState }
+
+promoteToWinOrLoss : Model -> Model
+promoteToWinOrLoss model =
+  let
+    lossModel = promoteToLoss model
+    winModel = promoteToWin model
+  in
+    if lossModel.state == Loss then
+      lossModel
+
+    else if winModel.state == Win then
+      winModel
+
+    else
+      model
+
+promoteToLoss : Model -> Model
+promoteToLoss model =
+  let
+    uncoveredMinesCount =
+      List.concat model.board
+      |> List.filter (\square -> square.visibility == Uncovered && square.content == Mine)
+      |> List.length
+
+    model' =
+      if uncoveredMinesCount > 0 then
+        { model | state = Loss
+        , board = uncoverAllSquaresAndShowIncorrectFlags model.board
+        }
+
+      else
+        model
+  in
+    model'
 
 promoteToWin : Model -> Model
 promoteToWin model =
@@ -352,6 +434,28 @@ peekSquareNeighbors model square =
   in
     { model | board = updatedBoard }
 
+uncoverSquareNeighbors : Model -> Square -> Model
+uncoverSquareNeighbors model square =
+  let
+    linkedNeighborPositions =
+      neighbors model.dimensions square.pos
+
+    findNeighborSquares square' =
+      List.member square'.pos linkedNeighborPositions
+        && square'.visibility == Covered
+
+    neighborSquares =
+      model.board
+      |> List.concat
+      |> List.filter findNeighborSquares
+
+    updateRow row =
+      List.map (uncoverMatchingSquares neighborSquares) row
+
+    updatedBoard =
+      List.map updateRow model.board
+  in
+    { model | board = updatedBoard }
 
 flagAllMines : List (List Square) -> List (List Square)
 flagAllMines rows =
@@ -359,6 +463,30 @@ flagAllMines rows =
     flagMineSquare square =
       if square.content == Mine then
         { square | visibility = Flagged Flag }
+      else
+        square
+
+    updateRow squares =
+      List.map flagMineSquare squares
+
+    rows' =
+      List.map updateRow rows
+  in
+    rows'
+
+uncoverAllSquaresAndShowIncorrectFlags : List (List Square) -> List (List Square)
+uncoverAllSquaresAndShowIncorrectFlags rows =
+  let
+    flagMineSquare square =
+      if square.content /= Mine && square.visibility == Flagged Flag then
+        { square | visibility = Incorrect }
+
+      else if square.content /= Mine && square.visibility == Flagged Question then
+        { square | visibility = Incorrect }
+
+      else if square.visibility == Covered || square.visibility == Peek then
+        { square | visibility = Uncovered }
+
       else
         square
 
@@ -383,8 +511,8 @@ TODO:
   [√] covered -> mine -> explode all mines
   [√] covered -> touching 0 -> uncover this square and all neighbors that are not mines, recursively
   [√] uncovered -> touching 0 -> do nothing
+  [√] uncovered -> touching > 0 && neighbor flag count != touching count -> peek while mouse is down
   [-] uncovered -> touch > 0 && neighbor flag count == touching count -> uncover all neighbors
-  [-] uncovered -> touching > 0 && neighbor flag count != touching count -> peek while mouse is down
 -}
 updateSquareSelection : Model -> Square -> Model
 updateSquareSelection model square =
@@ -398,11 +526,9 @@ updateSquareSelection model square =
           flaggedNeighboringMineCount model square
       in
         if count == flaggedCount then
-          -- TODO verify this after we get keyboard flagging in
           uncoverSquareAndNeighbors model square
 
         else
-          -- TODO peek while mouse is down
           uncoverSquareInBoard model square
 
     Mine ->

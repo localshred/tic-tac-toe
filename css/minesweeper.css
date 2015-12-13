@@ -16,7 +16,8 @@
 }
 
 .game.minesweeper .square.uncovered,
-.game.minesweeper .square.peek {
+.game.minesweeper .square.peek,
+.game.minesweeper .square.incorrect {
   border: 1px solid #ccc;
   padding: 2px;
 }
