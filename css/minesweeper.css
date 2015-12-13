@@ -2,6 +2,14 @@
   margin-left: 76px;
 }
 
+.game.minesweeper .intermediate .controls {
+  margin-left: 180px;
+}
+
+.game.minesweeper .advanced .controls {
+  margin-left: 433px;
+}
+
 .game.minesweeper .controls {
   margin: 10px 15px;
 }
