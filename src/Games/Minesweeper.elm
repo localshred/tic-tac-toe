@@ -8,6 +8,7 @@ import Keyboard
 import Random
 import Set exposing (Set)
 import String
+import Time exposing (Time)
 import UI
 
 type alias Row =
@@ -61,6 +62,7 @@ type Mode =
 type Action =
   Restart
   | MetaKeyDown Bool
+  | Tick Time
   | ModeSelect Mode
   | SelectSquare Square
   | PeekSquare Square
@@ -79,6 +81,9 @@ type alias Model =
   , mineCount : Int
   , board : List (List Square)
   , metaKeyDown : Bool
+  , startTime : Time
+  , currentTime : Time
+  , elapsedTime : Int
   }
 
 {-
@@ -88,11 +93,12 @@ type alias Model =
 inputs : Signal Action
 inputs =
   Signal.mergeMany [ Signal.map MetaKeyDown Keyboard.meta
+  , Signal.map Tick (Time.every Time.second)
   ]
 
 init : Model
 init =
-  Model Pending Beginner (0,0) 0 [] False
+  Model Pending Beginner (0,0) 0 [] False 0 0 0
   |> update (ModeSelect Beginner) -- FIXME remove this to get back to allowing mode selection
 
 view : Signal.Address Action -> Model -> Html
@@ -133,7 +139,7 @@ boardView address model =
       div [ class "row controls" ] [
         score model
         , restartButton address model
-        , div [ class "clock" ] [ text "000" ]
+        , div [ class "clock" ] [ text <| padNumber model.elapsedTime ]
       ]
 
     gameInfo =
@@ -145,6 +151,20 @@ boardView address model =
       ]
   in
     div [] <| controlRow :: boardRows :: gameInfo :: []
+
+padNumber : number -> String
+padNumber n =
+  if n < 10 then
+    "00" ++ toString n
+
+  else if n < 100 then
+    "0" ++ toString n
+
+  else
+    toString n
+
+
+    
 
 restartButton : Signal.Address Action -> Model -> Html
 restartButton address model =
@@ -337,6 +357,19 @@ printRow address model squares =
   List.map (printSquare address model) squares
   |> div [ class "row" ]
 
+initializeStartTime : Model -> Model
+initializeStartTime model =
+  case model.state of
+    Started ->
+      if model.startTime == 0 && model.currentTime > 0 then
+        { model | startTime = model.currentTime }
+
+      else
+        model
+
+    otherwise ->
+      model
+
 update : Action -> Model -> Model
 update action model =
   case action of
@@ -354,10 +387,12 @@ update action model =
     SelectSquare square ->
       if model.metaKeyDown then
         flagSquareInBoard model square
+        |> initializeStartTime
 
       else
         updateSquareSelection model square
         |> promoteToWinOrLoss
+        |> initializeStartTime
 
     PeekSquare square ->
       peekSquareNeighbors model square
@@ -365,9 +400,30 @@ update action model =
     UncoverNeighborSquares square ->
       uncoverSquareNeighbors model square
       |> promoteToWinOrLoss
+      |> initializeStartTime
 
     MetaKeyDown keyState ->
       { model | metaKeyDown = keyState }
+
+    Tick time ->
+      { model | currentTime = time }
+      |> updateElapsedTime
+
+updateElapsedTime : Model -> Model
+updateElapsedTime model =
+  case model.state of
+    Started ->
+      if model.startTime > 0 && model.currentTime > 0 then
+        { model |
+          elapsedTime =
+            floor <| (model.currentTime - model.startTime) / 1000
+        }
+
+      else
+        model
+
+    otherwise ->
+      model
 
 promoteToWinOrLoss : Model -> Model
 promoteToWinOrLoss model =
@@ -395,6 +451,7 @@ promoteToLoss model =
     model' =
       if uncoveredMinesCount > 0 then
         { model | state = Loss
+        , elapsedTime = 999
         , board = uncoverAllSquaresAndShowIncorrectFlags model.board
         }
 
