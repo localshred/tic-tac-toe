@@ -101,6 +101,14 @@ init =
   Model Pending Beginner (0,0) 0 [] False 0 0 0
   |> update (ModeSelect Beginner) -- FIXME remove this to get back to allowing mode selection
 
+newGame : Model -> Model
+newGame model =
+  { model | state = Started
+  , board = generateBoard model.currentTime model.dimensions model.mineCount
+  , startTime = 0
+  , elapsedTime = 0
+  }
+
 view : Signal.Address Action -> Model -> Html
 view address model =
   let
@@ -376,13 +384,13 @@ update action model =
     ModeSelect mode ->
       let
         model' = selectMode mode model
-        board = generateBoard model'.dimensions model'.mineCount
+        board = generateBoard model.currentTime model'.dimensions model'.mineCount
       in
         { model' | state = Started
         , board = board }
 
     Restart ->
-      init
+      newGame model
 
     SelectSquare square ->
       if model.metaKeyDown then
@@ -807,14 +815,14 @@ generateRandomMineCells count maxSize seed initialMines =
     else
       randomMines
 
-generateBoard : (Width,Height) -> Int -> List (List Square)
-generateBoard (width,height) mineCount =
+generateBoard : Time -> (Width,Height) -> Int -> List (List Square)
+generateBoard time (width,height) mineCount =
   let
     totalSquareCount =
       width * height
 
     mineSquarePositions =
-      Set.map (cellNumberToSquarePosition width) (generateRandomMineCells mineCount totalSquareCount 42 Set.empty)
+      Set.map (cellNumberToSquarePosition width) (generateRandomMineCells mineCount totalSquareCount (floor time) Set.empty)
       |> Set.toList
 
     mineNeighbors =
