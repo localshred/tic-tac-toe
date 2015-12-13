@@ -201,20 +201,43 @@ printSquare address model square =
       , ("touching touching8", square.content == (Touching 8))
       ]
 
-    onClickHandler =
+    uncoverHandler =
       onClick address (SelectSquare square)
+
+    peekDownHandler =
+      onMouseDown address (PeekSquare square)
+
+    peekUpHandler =
+      onMouseUp address (PeekSquare square)
 
     squareAttributes =
       if model.state == Started && square.content == (Touching 0) && square.visibility == Uncovered then
         [ classes ]
+
+      else if model.state == Started && (isTouchingMoreThanZero square) && square.visibility == Uncovered then
+        [ classes, peekDownHandler, peekUpHandler ]
+
       else if model.state == Started then
-        [ classes, onClickHandler ]
+        [ classes, uncoverHandler ]
+
       else
         [ classes ]
   in
     div squareAttributes [
       text <| marker square
     ]
+
+isTouchingMoreThanZero : Square -> Bool
+isTouchingMoreThanZero square =
+  case square.content of
+    Touching 0 ->
+      False
+
+    Touching n ->
+      True
+
+    otherwise ->
+      False
 
 marker : Square -> String
 marker square =
@@ -276,12 +299,11 @@ update action model =
         updateSquareSelection model square
         |> promoteToWin
 
+    PeekSquare square ->
+      peekSquareNeighbors model square
 
     MetaKeyDown keyState ->
       { model | metaKeyDown = keyState }
-
-    otherwise ->
-      model
 
 promoteToWin : Model -> Model
 promoteToWin model =
@@ -307,6 +329,29 @@ promoteToWin model =
         model
   in
     model'
+
+peekSquareNeighbors : Model -> Square -> Model
+peekSquareNeighbors model square =
+  let
+    linkedNeighborPositions =
+      neighbors model.dimensions square.pos
+
+    findNeighborSquares square' =
+      List.member square'.pos linkedNeighborPositions
+
+    neighborSquares =
+      model.board
+      |> List.concat
+      |> List.filter findNeighborSquares
+
+    updateRow row =
+      List.map (peekMatchingSquares neighborSquares) row
+
+    updatedBoard =
+      List.map updateRow model.board
+  in
+    { model | board = updatedBoard }
+
 
 flagAllMines : List (List Square) -> List (List Square)
 flagAllMines rows =
@@ -465,6 +510,17 @@ uncoverMatchingSquares : List Square -> Square -> Square
 uncoverMatchingSquares squares square =
   if List.member square squares then
     { square | visibility = Uncovered }
+  else
+    square
+
+peekMatchingSquares : List Square -> Square -> Square
+peekMatchingSquares squares square =
+  if List.member square squares && square.visibility == Covered then
+    { square | visibility = Peek }
+
+  else if List.member square squares && square.visibility == Peek then
+    { square | visibility = Covered }
+
   else
     square
 

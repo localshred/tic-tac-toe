@@ -26,7 +26,7 @@
 }
 
 .game.minesweeper .square.peek {
-  background-color: #bada55;
+  background-color: #ddd;
 }
 
 .game.minesweeper .square.flagged {
