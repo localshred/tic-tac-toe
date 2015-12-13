@@ -129,6 +129,26 @@ boardView address model =
     boardRows =
       div [] <| List.map (printRow address model) model.board
 
+    controlRow =
+      div [ class "row controls" ] [
+        score model
+        , restartButton address model
+        , div [ class "clock" ] [ text "000" ]
+      ]
+
+    gameInfo =
+      ul [ class "game-info" ] [
+        li [] [ text "Left click to uncover a square." ]
+        , li [] [ text "Right click to plant a flag over a suspected mine. Right click again to make it a question mark." ]
+        , li [] [ text "The game is won when all squares not containing mines have been uncovered." ]
+      ]
+
+  in
+    div [] <| controlRow :: boardRows :: gameInfo :: []
+
+restartButton : Signal.Address Action -> Model -> Html
+restartButton address model =
+  let
     restartEmoji =
       case model.state of
         Started ->
@@ -142,23 +162,10 @@ boardView address model =
 
         Pending ->
           "💤"
-
-    controlRow =
-      div [ class "row controls" ] [
-        score model
-        , UI.pureButton (onClick address Restart) restartEmoji
-        , div [ class "clock" ] [ text "000" ]
-      ]
-
-    gameInfo =
-      ul [ class "game-info" ] [
-        li [] [ text "Left click to uncover a square." ]
-        , li [] [ text "Right click to plant a flag over a suspected mine. Right click again to make it a question mark." ]
-        , li [] [ text "The game is won when all squares not containing mines have been uncovered." ]
-      ]
-
   in
-    div [] <| controlRow :: boardRows :: gameInfo :: []
+    div [ class "row" ] [
+      UI.pureButton (onClick address Restart) restartEmoji
+    ]
 
 score : Model -> Html
 score model =
@@ -176,9 +183,19 @@ score model =
 
         otherwise ->
           model.mineCount
+
+    stringFlagCount =
+      if flaggedCount < 10 then
+        "00" ++ toString flaggedCount
+
+      else if flaggedCount < 100 then
+        "0" ++ toString flaggedCount
+
+      else
+        toString flaggedCount
   in
     div [ class "score" ] [
-      text <| toString flaggedCount
+      text <| stringFlagCount
     ]
 
 printSquare : Signal.Address Action -> Model -> Square -> Html

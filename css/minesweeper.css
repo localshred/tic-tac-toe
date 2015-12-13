@@ -1,17 +1,28 @@
+.game.minesweeper .beginner .controls {
+  margin-left: 76px;
+}
+
+.game.minesweeper .controls {
+  margin: 10px 15px;
+}
+
 .game.minesweeper .controls .pure-button {
   font-size: 25px;
   padding: 0 12px;
+  margin: 0 10px;
+  border: 1px solid #ccc;
 }
 
 .game.minesweeper .score,
 .game.minesweeper .clock {
   background-color: black;
   color: red;
-  width: 35px;
+  width: 70px;
   height: 35px;
   border: 1px solid grey;
   text-align: center;
   font-size: 30px;
+  font-family: monospace;
 }
 
 .game.minesweeper .square.covered,
