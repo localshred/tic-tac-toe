@@ -505,15 +505,6 @@ flaggedNeighboringMineCount model square =
   |> List.filter (\square -> square.visibility == Flagged Flag)
   |> List.length
 
-{-
-TODO:
-  [√] covered -> touching > 0 -> uncover this square
-  [√] covered -> mine -> explode all mines
-  [√] covered -> touching 0 -> uncover this square and all neighbors that are not mines, recursively
-  [√] uncovered -> touching 0 -> do nothing
-  [√] uncovered -> touching > 0 && neighbor flag count != touching count -> peek while mouse is down
-  [-] uncovered -> touch > 0 && neighbor flag count == touching count -> uncover all neighbors
--}
 updateSquareSelection : Model -> Square -> Model
 updateSquareSelection model square =
   case square.content of
