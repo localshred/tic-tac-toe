@@ -85,9 +85,9 @@ type alias Model =
   TODO
   - [ ] Get time at some value to get a better random seed on new game
 -}
-inputs : List (Signal Action)
+inputs : Signal Action
 inputs =
-  [ Signal.map MetaKeyDown Keyboard.meta
+  Signal.mergeMany [ Signal.map MetaKeyDown Keyboard.meta
   ]
 
 init : Model

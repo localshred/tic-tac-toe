@@ -40,8 +40,8 @@ app =
 
 inputs : List (Signal Action)
 inputs =
-  Minesweeper.inputs
-  |> List.map (\input -> Signal.map MinesweeperEvent input)
+  [ Signal.map MinesweeperEvent Minesweeper.inputs
+  ]
 
 init : (Model, Effects Action)
 init =
