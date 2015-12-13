@@ -99,7 +99,6 @@ inputs =
 init : Model
 init =
   Model Pending Beginner (0,0) 0 [] False 0 0 0
-  |> update (ModeSelect Beginner) -- FIXME remove this to get back to allowing mode selection
 
 newGame : Model -> Model
 newGame model =

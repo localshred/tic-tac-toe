@@ -48,8 +48,6 @@ init =
   let
     model =
       Model NoGame Minesweeper.init TicTacToe.init
-      |> update (ChangeGame Minesweeper) -- FIXME remove this to get back to game selector screen
-      |> fst
   in
     (,) model Effects.none
 
