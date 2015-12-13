@@ -1,9 +1,10 @@
-module Games.Minesweeper (Action, Model, view, update, init) where
+module Games.Minesweeper (Action, Model, view, update, init, inputs) where
 
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Keyboard
 import Random
 import Set exposing (Set)
 import String
@@ -62,7 +63,6 @@ type Action =
   | MetaKeyDown Bool
   | ModeSelect Mode
   | SelectSquare Square
-  | FlagSquare Square
   | PeekSquare Square
 
 type alias Dimensions =
@@ -77,11 +77,17 @@ type alias Model =
   , dimensions : Dimensions
   , mineCount : Int
   , board : List (List Square)
+  , metaKeyDown : Bool
   }
+
+inputs : List (Signal Action)
+inputs =
+  [ Signal.map MetaKeyDown Keyboard.meta
+  ]
 
 init : Model
 init =
-  Model Pending Beginner (0,0) 0 []
+  Model Pending Beginner (0,0) 0 [] False
   |> update (ModeSelect Beginner) -- FIXME remove this to get back to allowing mode selection
 
 view : Signal.Address Action -> Model -> Html
@@ -263,11 +269,16 @@ update action model =
       init
 
     SelectSquare square ->
-      updateSquareSelection model square
-      |> promoteToWin
+      if model.metaKeyDown then
+        flagSquareInBoard model square
 
-    FlagSquare square ->
-      flagSquareInBoard model square
+      else
+        updateSquareSelection model square
+        |> promoteToWin
+
+
+    MetaKeyDown keyState ->
+      { model | metaKeyDown = keyState }
 
     otherwise ->
       model
@@ -431,14 +442,14 @@ flagSquare selectedSquare square =
 
   else
     case selectedSquare.visibility of
-      Uncovered ->
+      Covered ->
         { square | visibility = Flagged Flag }
 
       Flagged Flag ->
         { square | visibility = Flagged Question }
 
       Flagged Question ->
-        { square | visibility = Uncovered }
+        { square | visibility = Covered }
 
       otherwise ->
         square
@@ -461,7 +472,7 @@ flagSquareInBoard : Model -> Square -> Model
 flagSquareInBoard model square =
   let
     updateRow row =
-      List.map (uncoverSquare square) row
+      List.map (flagSquare square) row
 
     updatedBoard =
       List.map updateRow model.board

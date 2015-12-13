@@ -6,7 +6,6 @@ import Games.TicTacToe as TicTacToe
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Keyboard
 import StartApp
 import Signal
 import UI
@@ -41,14 +40,14 @@ app =
 
 inputs : List (Signal Action)
 inputs =
-  [ Signal.map (MinesweeperEvent Minesweeper.MetaKeyDown) Keyboard.meta
-  ]
+  Minesweeper.inputs
+  |> List.map (\input -> Signal.map MinesweeperEvent input)
 
 init : (Model, Effects Action)
 init =
   let
     model =
-      Model NoGame Minesweeper.init TicTacToe.init False
+      Model NoGame Minesweeper.init TicTacToe.init
       |> update (ChangeGame Minesweeper) -- FIXME remove this to get back to game selector screen
       |> fst
   in
